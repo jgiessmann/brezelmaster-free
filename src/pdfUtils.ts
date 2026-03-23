@@ -99,103 +99,19 @@ export async function createPdf(state: any) {
   const blob = new Blob([pdfBytes as unknown as BlobPart], {type: "application/pdf"} );
   const url = URL.createObjectURL(blob);
 
-  //Datum bauen
-  const now = new Date();
-  const day = now.getDate();
-  const month = now.getMonth() + 1;
-  const year = 
-  String(now.getFullYear()).slice(-2);
+// PDF erzeugen
+const pdfBytes = await pdfDoc.save();
 
-  //Dateiname
-  const fileName = `brezel_${state.trainNumber || "unbekannt"}_${day}${month}${year}.pdf`;
+// Blob erstellen
+const blob = new Blob([pdfBytes as unknown as BlobPart], {
+  type: "application/pdf",
+});
 
-  // Neuer Vorschau-Tab mit eigenem Speichern-Button
-const previewWindow = window.open("", "_blank");
+// URL erzeugen
+const url = URL.createObjectURL(blob);
 
-if (!previewWindow) {
-  alert("Popup blockiert. Bitte Popups für diese Seite erlauben.");
-  return;
-}
-
-previewWindow.document.write(`
-  <!DOCTYPE html>
-  <html lang="de">
-    <head>
-      <meta charset="UTF-8" />
-      <title>${fileName}</title>
-      <style>
-        body {
-          margin: 0;
-          font-family: Arial, sans-serif;
-          background: #f3f3f3;
-        }
-        .toolbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 12px 16px;
-          background: #3B5BDB;
-          color: white;
-          box-sizing: border-box;
-        }
-        .title {
-          font-size: 16px;
-          font-weight: bold;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .actions {
-          display: flex;
-          gap: 10px;
-        }
-        button {
-          background: white;
-          color: #3B5BDB;
-          border: none;
-          border-radius: 10px;
-          padding: 10px 14px;
-          font-size: 14px;
-          font-weight: bold;
-          cursor: pointer;
-        }
-        iframe {
-          width: 100%;
-          height: calc(100vh - 60px);
-          border: none;
-          display: block;
-          background: white;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="toolbar">
-        <div class="title">${fileName}</div>
-        <div class="actions">
-          <button id="saveBtn">PDF speichern</button>
-        </div>
-      </div>
-      <iframe src="${url}"></iframe>
-
-      <script>
-        const pdfUrl = ${JSON.stringify(url)};
-        const downloadName = ${JSON.stringify(fileName)};
-
-        document.getElementById("saveBtn").addEventListener("click", () => {
-          const a = document.createElement("a");
-          a.href = pdfUrl;
-          a.download = downloadName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        });
-      </script>
-    </body>
-  </html>
-`);
-
-previewWindow.document.close()
+// PDF im neuen Tab öffnen (stabilste Lösung)
+window.open(url, "_blank");
   
 
 }
