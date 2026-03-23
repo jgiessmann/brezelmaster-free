@@ -111,16 +111,93 @@ export async function createPdf(state: any) {
   {state.trainNumber || "unbekannt"}_${day}$
   {month}${year}.pdf`;
 
-  //Download auslösen
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // Neuer Vorschau-Tab mit eigenem Speichern-Button
+const previewWindow = window.open("", "_blank");
 
-  // TAB mit Vorschau (leicht verzögert)
-  setTimeout(() => URL.revokeObjectURL(url),
-  2000);
+if (!previewWindow) {
+  alert("Popup blockiert. Bitte Popups für diese Seite erlauben.");
+  return;
+}
+
+previewWindow.document.write(`
+  <!DOCTYPE html>
+  <html lang="de">
+    <head>
+      <meta charset="UTF-8" />
+      <title>${fileName}</title>
+      <style>
+        body {
+          margin: 0;
+          font-family: Arial, sans-serif;
+          background: #f3f3f3;
+        }
+        .toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 16px;
+          background: #6E53B3;
+          color: white;
+          box-sizing: border-box;
+        }
+        .title {
+          font-size: 16px;
+          font-weight: bold;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .actions {
+          display: flex;
+          gap: 10px;
+        }
+        button {
+          background: white;
+          color: #6E53B3;
+          border: none;
+          border-radius: 10px;
+          padding: 10px 14px;
+          font-size: 14px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+        iframe {
+          width: 100%;
+          height: calc(100vh - 60px);
+          border: none;
+          display: block;
+          background: white;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="toolbar">
+        <div class="title">${fileName}</div>
+        <div class="actions">
+          <button id="saveBtn">PDF speichern</button>
+        </div>
+      </div>
+      <iframe src="${url}"></iframe>
+
+      <script>
+        const pdfUrl = ${JSON.stringify(url)};
+        const downloadName = ${JSON.stringify(fileName)};
+
+        document.getElementById("saveBtn").addEventListener("click", () => {
+          const a = document.createElement("a");
+          a.href = pdfUrl;
+          a.download = downloadName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        });
+      </script>
+    </body>
+  </html>
+`);
+
+previewWindow.document.close()
+  
 
 }
