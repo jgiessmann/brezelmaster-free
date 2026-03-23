@@ -107,9 +107,7 @@ export async function createPdf(state: any) {
   String(now.getFullYear()).slice(-2);
 
   //Dateiname
-  const fileName = `brezel_$
-  {state.trainNumber || "unbekannt"}_${day}$
-  {month}${year}.pdf`;
+  const fileName = `brezel_${state.trainNumber || "unbekannt"}_${day}${month}${year}.pdf`;
 
   // Neuer Vorschau-Tab mit eigenem Speichern-Button
 const previewWindow = window.open("", "_blank");
