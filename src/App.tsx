@@ -30,11 +30,11 @@ function App() {
   const [warningText, setWarningText] = useState("");
   const [pendingPdfState, setPendingPdfState] = useState<any | null>(null);
 
-  const [customLokName, setCustomLokName] = useState("Eigene Lok");
-  const [customLokWeight, setCustomLokWeight] = useState("88");
-  const [customLokBrakeP, setCustomLokBrakeP] = useState("88");
-  const [customLokBrakeG, setCustomLokBrakeG] = useState("75");
-  const [customLokLength, setCustomLokLength] = useState("15");
+  const [customLokName, setCustomLokName] = useState("");
+  const [customLokWeight, setCustomLokWeight] = useState("");
+  const [customLokBrakeP, setCustomLokBrakeP] = useState("");
+  const [customLokBrakeG, setCustomLokBrakeG] = useState("");
+  const [customLokLength, setCustomLokLength] = useState("");
 
   const g1206: LokType = {
     name: "G1206",
