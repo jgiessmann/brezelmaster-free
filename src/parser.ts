@@ -108,8 +108,8 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
 
   const trainNumber = findFirstGroup(
     normalized,
-    String.raw`Zugnummer\s+(\d+)`,
-    String.raw`Zugnummer\(n\)\s+(\d+)`
+    "Zugnummer\\s+(\\d+)",
+    "Zugnummer\\(n\\)\\s+(\\d+)"
   );
 
   const departureStation = findDepartureStation(normalized);
@@ -141,8 +141,8 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
 
   const finalBrakeFromDeduction = findGermanInt(
     normalized,
-    String.raw`Bremsgewicht\s+R\/P\s+\(DE\)\s+([\d.]+)`,
-    String.raw`Bremsgewicht\s+R\/P\s+\(DE\)\s*([\d.]+)`
+    "Bremsgewicht\\s+R\\/P\\s+\\(DE\\)\\s+([\\d.]+)",
+    "Bremsgewicht\\s+R\\/P\\s+\\(DE\\)\\s*([\\d.]+)"
   );
 
   const finalBrake =
@@ -183,9 +183,9 @@ function normalize(input: string): string {
 function findDepartureStation(text: string): string {
   const raw = findFirstGroup(
     text,
-    String.raw`Ab Bhf\.\s+(.+?)\s+\(DE\)`,
-    String.raw`Ab Bhf\.\s+(.+?)\s+Wagen und nicht arbeitende Triebfahrzeuge`,
-    String.raw`Ab Bhf\.\s+(.+?)\s+Abfahrtsdatum`
+    "Ab Bhf\\.\\s+(.+?)\\s+\\(DE\\)",
+    "Ab Bhf\\.\\s+(.+?)\\s+Wagen und nicht arbeitende Triebfahrzeuge",
+    "Ab Bhf\\.\\s+(.+?)\\s+Abfahrtsdatum"
   );
   return raw.split("(")[0].trim();
 }
