@@ -45,7 +45,10 @@ export async function extractPdfText(file: File): Promise<string> {
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
-    const textContent = await page.getTextContent();
+    const textContent = await (page as any).getTextContent({
+      normalizeWhitespace: true,
+    });
+    
 
     const items = (textContent.items as any[])
       .filter((item) => typeof item?.str === "string" && item.str.trim() !== "")
