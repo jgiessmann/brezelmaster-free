@@ -68,8 +68,27 @@ export async function extractPdfText(file: File): Promise<string> {
     const tolerance = 2;
 
     for (const item of items) {
-      const existingLine = lines.find((line) => Math.abs(line.y - item.y) <= tolerance);
+      let existingLine: { y: number; parts: { x: 
+        number; str: string }[] } | undefined =
+        undefined;
 
+        for (const line of lines) {
+          if (Math.abs(line.y - item.y) <=
+          tolerance) {
+            existingLine = line;
+            break;
+          }
+        }
+      if (existingLine) {
+        existingLine.parts.push({ x: item.x,
+          str: item.str });
+        } else {
+          lines.push({
+            y: item.y,
+            parts: [{ x: item.x, str: item.str }],
+          });
+        }
+      
       if (existingLine) {
         existingLine.parts.push({ x: item.x, str: item.str });
       } else {
@@ -120,8 +139,9 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   const activeRows = rows.filter((row) => row.brakeP > 0 || row.brakeG > 0);
 
   const multiRelease = activeRows.length;
-  const kLll = activeRows.filter((row) =>
-  ["K", "L", "LL"].includes(row.sole)
+  const kLll = activeRows.filter(
+    (row) => row.sole === "K" || row.sole
+    === "L" || row.sole === "LL"
   ).length;
 
   const dCount = activeRows.filter((row) => row.sole === "D").length;
@@ -136,8 +156,11 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   const sum = parseSummary(normalized);
 
   const allInGMode =
-    activeRows.length > 0 &&
-    activeRows.every((r) => r.brakeP === 0 && r.brakeG > 0);
+  activeRows.length > 0 &&
+  activeRows.filter((r) => r.brakeP === 0
+  && r.brakeG > 0).length ===
+  activeRows.length;
+    
 
   const finalBrakeFromDeduction = findGermanInt(
     normalized,
@@ -191,10 +214,16 @@ function findDepartureStation(text: string): string {
 }
 
 function parseSummary(text: string): Summary {
-  const sumLine =
-  text
-    .split("\n")
-    .find((line) => line.trim().startsWith("Summe ")) ?? "";
+  const linesForSum = text.split("\n");
+  let sumLine = "";
+
+  for (const line of linesForSum) {
+    if (line.trim().indexOf("Summe") === 0)
+    {
+      sumLine = line;
+      break;
+    }
+  }
 
   const nums: string[] = sumLine.match(/[\d.,]+/g) || [];
 
