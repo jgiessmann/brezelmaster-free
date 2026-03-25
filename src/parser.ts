@@ -196,7 +196,7 @@ function parseSummary(text: string): Summary {
     .split("\n")
     .find((line) => line.trim().startsWith("Summe ")) ?? "";
 
-  const nums = [...sumLine.matchAll(/[\d.,]+/g)].map((m) => m[0]);
+  const nums: string[] = sumLine.match(/[\d.,]+/g) || [];
 
   if (nums.length === 5) {
     return {
