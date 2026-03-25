@@ -1,6 +1,5 @@
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-
-import workerSrc from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
+import * as pdfjsLib from "pdfjs-dist";
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -15,10 +14,10 @@ export type ParsedSummary = {
   totalBrakeWeightTons: number;
   multiReleaseBrakeCount: number;
   kLllBrakeCount: number;
+  dBrakeCount: number;
   dangerousGoodsPresent: boolean;
   lowerSpeedKmh: number | null;
   allInGMode: boolean;
-  dBrakeCount: number,
 };
 
 type WagonRow = {
@@ -39,33 +38,24 @@ type Summary = {
 };
 
 export async function extractPdfText(file: File): Promise<string> {
-  console.log("DEBUG 1: extractTextFromPdfgestartet");
   const arrayBuffer = await file.arrayBuffer();
-  console.log("DEBUG 1: starte getDocument");
-
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-  console.log("DEBUG 2: PDF geladen; Seiten:", pdf.numPages);
 
   let fullText = "";
 
-console.log("DEBUG 3: starte Seitenschleife");
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
-    console.log("DEBUG 4: TextContent geladen für Seite", pageNum);
-    
-    
-    const items = textContent.items
-      .filter((item: any) => typeof item.str === "string" && item.str.trim() !== "")
-      .map((item: any) => ({
-        str: item.str as string,
-        x: item.transform[4] as number,
-        y: item.transform[5] as number,
+
+    const items = (textContent.items as any[])
+      .filter((item) => typeof item?.str === "string" && item.str.trim() !== "")
+      .map((item) => ({
+        str: String(item.str),
+        x: Number(item.transform?.[4] ?? 0),
+        y: Number(item.transform?.[5] ?? 0),
       }));
 
-    // PDF-Koordinaten: oben -> größere y-Werte
-    // Erst nach y sortieren, dann nach x
+    // Erst nach y, dann nach x
     items.sort((a, b) => {
       const yDiff = Math.abs(b.y - a.y);
       if (yDiff > 2) return b.y - a.y;
@@ -76,27 +66,8 @@ console.log("DEBUG 3: starte Seitenschleife");
     const tolerance = 2;
 
     for (const item of items) {
-      let existingLine: { y: number; parts: { x: 
-        number; str: string }[] } | undefined =
-        undefined;
+      const existingLine = lines.find((line) => Math.abs(line.y - item.y) <= tolerance);
 
-        for (const line of lines) {
-          if (Math.abs(line.y - item.y) <=
-          tolerance) {
-            existingLine = line;
-            break;
-          }
-        }
-      if (existingLine) {
-        existingLine.parts.push({ x: item.x,
-          str: item.str });
-        } else {
-          lines.push({
-            y: item.y,
-            parts: [{ x: item.x, str: item.str }],
-          });
-        }
-      
       if (existingLine) {
         existingLine.parts.push({ x: item.x, str: item.str });
       } else {
@@ -122,14 +93,10 @@ console.log("DEBUG 3: starte Seitenschleife");
       .join("\n");
 
     fullText += pageText + "\n";
-    console.log("DEBUG 5: fullText Länge nach Seite", pageNum, fullText.length);
   }
-console.log("DEBUG 6: finaler Text fertig", fullText.length);
+
   return fullText;
 }
-  
-
-  
 
 export function parseTrainCheckerText(text: string): ParsedSummary {
   const normalized = normalize(text);
@@ -148,16 +115,14 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   const activeRows = rows.filter((row) => row.brakeP > 0 || row.brakeG > 0);
 
   const multiRelease = activeRows.length;
-  const kLll = activeRows.filter(
-    (row) => row.sole === "K" || row.sole
-    === "L" || row.sole === "LL"
+  const kLll = activeRows.filter((row) =>
+    ["K", "L", "LL"].includes(row.sole)
   ).length;
-
   const dCount = activeRows.filter((row) => row.sole === "D").length;
 
   const vmaxValues = rows
     .map((r) => r.vmax)
-    .filter((v): v is number => v !== null);
+    .filter((v): v is number => v != null);
 
   const lowestVmax = vmaxValues.length > 0 ? Math.min(...vmaxValues) : null;
   const dangerousGoodsPresent = rows.some((r) => r.dangerousGoods);
@@ -165,11 +130,8 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   const sum = parseSummary(normalized);
 
   const allInGMode =
-  activeRows.length > 0 &&
-  activeRows.filter((r) => r.brakeP === 0
-  && r.brakeG > 0).length ===
-  activeRows.length;
-    
+    activeRows.length > 0 &&
+    activeRows.every((r) => r.brakeP === 0 && r.brakeG > 0);
 
   const finalBrakeFromDeduction = findGermanInt(
     normalized,
@@ -178,7 +140,7 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   );
 
   const finalBrake =
-    finalBrakeFromDeduction !== null
+    finalBrakeFromDeduction != null
       ? finalBrakeFromDeduction
       : allInGMode
       ? sum.brakeG
@@ -208,7 +170,7 @@ function normalize(input: string): string {
     .replace(/–/g, "-")
     .replace(/—/g, "-")
     .replace(/\r/g, "")
-    .replace(/Triebfahr￾zeuge/g, "Triebfahrzeuge")
+    .replace(/Triebfahr􀀀zeuge/g, "Triebfahrzeuge")
     .replace(/[ ]{2,}/g, " ");
 }
 
@@ -219,33 +181,32 @@ function findDepartureStation(text: string): string {
     "Ab Bhf\\.\\s+(.+?)\\s+Wagen und nicht arbeitende Triebfahrzeuge",
     "Ab Bhf\\.\\s+(.+?)\\s+Abfahrtsdatum"
   );
+
   return raw.split("(")[0].trim();
 }
 
 function parseSummary(text: string): Summary {
-  const linesForSum = text.split("\n");
-  let sumLine = "";
-
-  for (const line of linesForSum) {
-    if (line.trim().indexOf("Summe") === 0)
-    {
-      sumLine = line;
-      break;
-    }
-  }
+  const sumLine =
+    text
+      .split("\n")
+      .find((line) => line.trim().startsWith("Summe ")) ?? "";
 
   const nums: string[] = sumLine.match(/[\d.,]+/g) || [];
 
-  if (nums.length === 5) {
+  // Typischer TrainChecker-Fall:
+  // Summe 80 240,80 1.131.955 1.575.415 873 294 135
+  //        0    1        2         3     4   5   6
+  if (nums.length >= 7) {
     return {
       axles: parseIntSafe(nums[0]),
       lengthMeters: parseGermanDouble(nums[1]),
-      weightTons: Math.round(parseGermanIntWithDots(nums[2]) / 1000),
-      brakeP: parseIntSafe(nums[3]),
-      brakeG: parseIntSafe(nums[4]),
+      weightTons: Math.round(parseGermanIntWithDots(nums[3]) / 1000),
+      brakeP: parseIntSafe(nums[4]),
+      brakeG: parseIntSafe(nums[5]),
     };
   }
 
+  // Fallbacks für andere Layouts
   if (nums.length === 6) {
     return {
       axles: parseIntSafe(nums[0]),
@@ -256,13 +217,13 @@ function parseSummary(text: string): Summary {
     };
   }
 
-  if (nums.length >= 7) {
+  if (nums.length === 5) {
     return {
       axles: parseIntSafe(nums[0]),
       lengthMeters: parseGermanDouble(nums[1]),
-      weightTons: Math.round(parseGermanIntWithDots(nums[3]) / 1000),
-      brakeP: parseIntSafe(nums[4]),
-      brakeG: parseIntSafe(nums[5]),
+      weightTons: Math.round(parseGermanIntWithDots(nums[2]) / 1000),
+      brakeP: parseIntSafe(nums[3]),
+      brakeG: parseIntSafe(nums[4]),
     };
   }
 
@@ -277,8 +238,10 @@ function parseSummary(text: string): Summary {
 
 function parseRows(text: string): WagonRow[] {
   const lines = text.split("\n");
+
   const wagonRegex = /\b\d{2}\s\d{2}\s\d{4}\s\d{3}-\d\b/;
   const soleRegex = /\b(K|L|LL|D|F|R|P|G)\b/i;
+  const vmaxRegex = /\b(40|50|60|70|80|90|100|120|140|160)\b(?=\s+[A-Z]\d\b|\s*$)/;
 
   const rows: WagonRow[] = [];
 
@@ -286,28 +249,29 @@ function parseRows(text: string): WagonRow[] {
     const wagonMatch = line.match(wagonRegex);
     if (!wagonMatch) continue;
 
+    const wagon = wagonMatch[0];
+
     const soleMatch = line.match(soleRegex);
     const sole = soleMatch ? soleMatch[0].toUpperCase() : "";
 
-    const wagon = wagonMatch[0];
-
     const afterSole = soleMatch
-  ? line.substring(line.indexOf(soleMatch[0]) + soleMatch[0].length).trim()
-  : line;
+      ? line.substring(line.indexOf(soleMatch[0]) + soleMatch[0].length).trim()
+      : line;
 
+    // Erste Zahlen nach der Sohle sind die relevanten Bremszahlen.
+    // Für die Zähl-Logik reicht: wenn P oder G > 0, dann aktiv.
     const numberTokens = (afterSole.match(/\b\d{1,3}\b/g) || [])
       .map((m) => parseIntSafe(m));
 
     const brakeP = numberTokens[0] ?? 0;
     const brakeG = numberTokens[1] ?? 0;
 
-    const dangerousGoods = /\b\d{4}\b\s+\b\d(?:[.,]\d)?(?:\s*,\s*\d(?:[.,]\d)?)?\b/.test(line);
+    const dangerousGoods =
+      /\b\d{4}\b\s+\b\d(?:[.,]\d)?(?:\?\:\s*,\s*\d(?:[.,]\d)?)?\b/.test(line) ||
+      /\bUN\b/i.test(line);
 
-    const vmaxValues = (line.match(/\b(40|50|60|70|80|90|100|120|140|160)\b/g) || [])
-      .map((m) => parseIntSafe(m))
-      .filter((v) => v > 0);
-
-    const vmax = vmaxValues.length > 0 ? vmaxValues[vmaxValues.length - 1] : null;
+    const vmaxMatch = line.match(vmaxRegex);
+    const vmax = vmaxMatch ? parseIntSafe(vmaxMatch[0]) : null;
 
     rows.push({
       wagonNumber: wagon,
@@ -324,40 +288,32 @@ function parseRows(text: string): WagonRow[] {
 
 function findFirstGroup(text: string, ...patterns: string[]): string {
   for (const pattern of patterns) {
-    const regex = new RegExp(pattern, "is");
-    const match = text.match(regex);
-    const value = match?.[1]?.trim();
-    if (value) return value;
+    const re = new RegExp(pattern, "i");
+    const match = text.match(re);
+    if (match?.[1]) return match[1].trim();
   }
   return "";
 }
 
 function findGermanInt(text: string, ...patterns: string[]): number | null {
-  for (const pattern of patterns) {
-    const regex = new RegExp(pattern, "is");
-    const match = text.match(regex);
-    const raw = match?.[1];
-
-    if (raw) {
-      const value = raw.replace(/\./g, "").replace(/,/g, "");
-      const parsed = parseInt(value, 10);
-      if (!Number.isNaN(parsed)) return parsed;
-    }
-  }
-  return null;
-}
-
-function parseGermanDouble(value: string): number {
-  const parsed = parseFloat(value.replace(",", "."));
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
-
-function parseGermanIntWithDots(value: string): number {
-  const parsed = parseInt(value.replace(/\./g, ""), 10);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  const raw = findFirstGroup(text, ...patterns);
+  if (!raw) return null;
+  return parseGermanIntWithDots(raw);
 }
 
 function parseIntSafe(value: string): number {
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  const n = parseInt(String(value).replace(/[^\d-]/g, ""), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseGermanDouble(value: string): number {
+  const normalized = String(value).replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseGermanIntWithDots(value: string): number {
+  const normalized = String(value).replace(/\./g, "").replace(",", "");
+  const n = parseInt(normalized, 10);
+  return Number.isFinite(n) ? n : 0;
 }
