@@ -15,18 +15,24 @@ export async function createPdf(state: any) {
     height: 1191,
   });
 
-  const drawCentered = (text: string, x: number, y: number, size = 16) => {
-    if (!text) return;
+  const drawCentered = (
+  text: string,
+  x: number,
+  y: number,
+  size = 12,
+  isRed = false
+) => {
+  if (!text) return;
 
-    const approxWidth = text.length * (size * 0.3);
+  const approxWidth = text.length * (size * 0.3);
 
-    page.drawText(text, {
-      x: x - approxWidth,
-      y: 1191 - y,
-      size,
-      color: rgb(0, 0, 0),
-    });
-  };
+  page.drawText(text, {
+    x: x - approxWidth,
+    y: 1191 - y,
+    size,
+    color: isRed ? rgb(1, 0, 0) : rgb(0, 0, 0),
+  });
+};
 
   const strike = (x: number, y: number) => {
     page.drawLine({
@@ -60,7 +66,13 @@ export async function createPdf(state: any) {
   // Zeile 4–6
   drawCentered(state.minimumBrakePercentage || "", 771, 378);
   drawCentered(state.availableBrakePercentage || "", 770, 408);
-  drawCentered(state.missingBrakePercentage || "", 770, 439);
+  drawCentered(
+  state.missingBrakePercentage || "",
+  770,
+  439,
+  12,
+  (state.missingBrakePercentage || "") !== ""
+);
 
   // Zeile 7
   drawCentered(state.lastVehicleNumber || "", 686, 465);
@@ -80,7 +92,13 @@ export async function createPdf(state: any) {
   // Zeile 16 Geschwindigkeit
   if (state.speedCheckNo) {
     strike(577, 725);
-    drawCentered(state.lowerVehicleSpeedKmh || "", 582, 758);
+    drawCentered(
+  state.lowerVehicleSpeedKmh || "",
+  582,
+  758,
+  12,
+  (state.lowerVehicleSpeedKmh || "") !== ""
+);
   } else {
     strike(610, 725);
   }
