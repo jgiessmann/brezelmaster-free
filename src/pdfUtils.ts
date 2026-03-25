@@ -1,10 +1,14 @@
-import { PDFDocument, rgb } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 export async function createPdf(state: any) {
   const pngBytes = await fetch("/bremszettel.png").then((res) => res.arrayBuffer());
 
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([842, 1191]);
+  const font = await
+  pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await
+  pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const pngImage = await pdfDoc.embedPng(pngBytes);
 
@@ -20,7 +24,8 @@ export async function createPdf(state: any) {
   x: number,
   y: number,
   size = 18,
-  isRed = false
+  isRed = false,
+  isBold = false
 ) => {
   if (!text) return;
 
@@ -30,6 +35,7 @@ export async function createPdf(state: any) {
     x: x - approxWidth,
     y: 1191 - y,
     size,
+    font: isBold ? boldFont : font,
     color: isRed ? rgb(1, 0, 0) : rgb(0, 0, 0),
   });
 };
@@ -44,14 +50,14 @@ export async function createPdf(state: any) {
   };
 
   // Kopf
-  drawCentered(state.date || "", 420, 56);
-  drawCentered(state.trainNumber || "", 308, 162);
-  drawCentered(state.departureStation || "", 710, 163);
+  drawCentered(state.date || "", 420, 60);
+  drawCentered(state.trainNumber || "", 308, 167);
+  drawCentered(state.departureStation || "", 713, 166);
 
   // Zeile 1 Gewicht
-  drawCentered(state.wagonWeightTons || "", 599, 305);
-  drawCentered(state.locoWeightTons || "", 684, 305);
-  drawCentered(state.totalWeightTons || "", 771, 305);
+  drawCentered(state.wagonWeightTons || "", 599, 308);
+  drawCentered(state.locoWeightTons || "", 684, 308);
+  drawCentered(state.totalWeightTons || "", 771, 308);
 
   // Zeile 2 Bremsgewicht
   drawCentered(state.wagonBrakeWeightTons || "", 599, 330);
@@ -70,15 +76,16 @@ export async function createPdf(state: any) {
   state.missingBrakePercentage || "",
   770,
   439,
-  12,
+  18,
+  (state.missingBrakePercentage || "") !== "",
   (state.missingBrakePercentage || "") !== ""
 );
 
   // Zeile 7
-  drawCentered(state.lastVehicleNumber || "", 686, 465);
+  drawCentered(state.lastVehicleNumber || "", 689, 468);
 
   // Zeile 8–12
-  drawCentered("---", 598, 493);
+  drawCentered("0", 598, 493);
   drawCentered(state.multiReleaseBrakeCount || "", 598, 522);
   drawCentered("0", 598, 547);
   drawCentered(state.kLllBrakeCount || "", 598, 571);
@@ -97,6 +104,7 @@ export async function createPdf(state: any) {
   582,
   763,
   18,
+  (state.lowerVehicleSpeedKmh || "") !== "",
   (state.lowerVehicleSpeedKmh || "") !== ""
 );
   } else {
