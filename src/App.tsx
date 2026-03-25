@@ -97,7 +97,12 @@ function App() {
     } catch (error: any) {
       console.error("PDF-Fehler:", error);
       setParsedSummary(null);
-      setPdfStatusText(`PDF konnte nicht gelesen werden: ${error?.message || error}`);
+      const message = error?.message ||
+      String(error);
+      const stack = error?.stack || "";
+
+      setPdfStatusText(`PDF Fehler: ${message}
+        $stack}`);
     }
   }
 
