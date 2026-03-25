@@ -53,10 +53,9 @@ console.log("DEBUG 3: starte Seitenschleife");
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
-    console.log("DEBUG 5: fullText Länge",
-      fullText.length);
+    console.log("DEBUG 4: TextContent geladen für Seite", pageNum);
     
-
+    
     const items = textContent.items
       .filter((item: any) => typeof item.str === "string" && item.str.trim() !== "")
       .map((item: any) => ({
@@ -123,8 +122,9 @@ console.log("DEBUG 3: starte Seitenschleife");
       .join("\n");
 
     fullText += pageText + "\n";
+    console.log("DEBUG 5: fullText Länge nach Seite", pageNum, fullText.length);
   }
-
+console.log("DEBUG 6: finaler Text fertig", fullText.length);
   return fullText;
 }
   
