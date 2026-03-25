@@ -39,14 +39,23 @@ type Summary = {
 };
 
 export async function extractPdfText(file: File): Promise<string> {
+  console.log("DEBUG 1: extractTextFromPdfgestartet");
   const arrayBuffer = await file.arrayBuffer();
+  console.log("DEBUG 1: starte getDocument");
+
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+  console.log("DEBUG 2: PDF geladen; Seiten:", pdf.numPages);
 
   let fullText = "";
 
+console.log("DEBUG 3: starte Seitenschleife");
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
+    console.log("DEBUG 5: fullText Länge",
+      fullText.length);
+    
 
     const items = textContent.items
       .filter((item: any) => typeof item.str === "string" && item.str.trim() !== "")
