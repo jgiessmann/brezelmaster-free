@@ -1,5 +1,5 @@
-import * as pdfjsLib from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.js?url";
 
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -45,9 +45,8 @@ export async function extractPdfText(file: File): Promise<string> {
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
-    const textContent = await (page as any).getTextContent({
-      normalizeWhitespace: true,
-    });
+    const textContent = await page.getTextContent();
+    
     
 
     const items = (textContent.items as any[])
