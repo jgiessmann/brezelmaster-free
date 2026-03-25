@@ -257,16 +257,16 @@ function parseRows(text: string): WagonRow[] {
   ? line.substring(line.indexOf(soleMatch[0]) + soleMatch[0].length).trim()
   : line;
 
-    const numberTokens = [...afterSole.matchAll(/\b\d{1,3}\b/g)]
-      .map((m) => parseIntSafe(m[0]));
+    const numberTokens = (afterSole.match(/\b\d{1,3}\b/g) || [])
+      .map((m) => parseIntSafe(m));
 
     const brakeP = numberTokens[0] ?? 0;
     const brakeG = numberTokens[1] ?? 0;
 
     const dangerousGoods = /\b\d{4}\b\s+\b\d(?:[.,]\d)?(?:\s*,\s*\d(?:[.,]\d)?)?\b/.test(line);
 
-    const vmaxValues = [...line.matchAll(/\b(40|50|60|70|80|90|100|120|140|160)\b/g)]
-      .map((m) => parseIntSafe(m[1]))
+    const vmaxValues = (line.match(/\b(40|50|60|70|80|90|100|120|140|160)\b/g) || [])
+      .map((m) => parseIntSafe(m))
       .filter((v) => v > 0);
 
     const vmax = vmaxValues.length > 0 ? vmaxValues[vmaxValues.length - 1] : null;
