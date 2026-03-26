@@ -243,7 +243,7 @@ function parseRows(text: string): WagonRow[] {
 
   const wagonRegex = /\b\d{2}\s\d{2}\s\d{4}\s\d{3}-\d\b/;
   const soleRegex = /\b(K|L|LL|D|F|R|P|G)\b/i;
-  const vmaxRegex = /\b(40|50|60|70|80|90|100|120|140|160)\b(?=\s+[A-Z]\d\b|\s*$)/;
+  const vmaxRegex = /\b(40|50|60|70|80|90|100|120|140|160)\b/g;
 
   const rows: WagonRow[] = [];
 
@@ -272,8 +272,13 @@ function parseRows(text: string): WagonRow[] {
       /\b\d{4}\b\s+\b\d(?:[.,]\d)?(?:\?\:\s*,\s*\d(?:[.,]\d)?)?\b/.test(line) ||
       /\bUN\b/i.test(line);
 
-    const vmaxMatch = line.match(vmaxRegex);
-    const vmax = vmaxMatch ? parseIntSafe(vmaxMatch[0]) : null;
+    const vmaxMatches = line.match(vmaxRegex)
+    || [];
+    const vmax = vmaxMatches.length > 0
+    ?
+    parseIntSafe(vmaxMatches[vmaxMatches.length - 1])
+    : null;
+    
 
     rows.push({
       wagonNumber: wagon,
