@@ -8,6 +8,7 @@ type LokType = {
   brakeWeightP: number;
   brakeWeightG: number;
   lengthMeters: number;
+  vmax: number;
 };
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
   const [customLokBrakeP, setCustomLokBrakeP] = useState("");
   const [customLokBrakeG, setCustomLokBrakeG] = useState("");
   const [customLokLength, setCustomLokLength] = useState("");
+  const [customLokVmax, setCustomLokVmax] = useState("");
 
   const g1206: LokType = {
     name: "G1206",
@@ -44,6 +46,7 @@ function App() {
     brakeWeightP: 88,
     brakeWeightG: 75,
     lengthMeters: 15,
+    vmax: 100,
   };
 
   const customLok: LokType = {
@@ -52,6 +55,7 @@ function App() {
     brakeWeightP: Number(customLokBrakeP) || 0,
     brakeWeightG: Number(customLokBrakeG) || 0,
     lengthMeters: Number(customLokLength) || 0,
+    vmax: Number(customLokVmax) || 0,
   };
 
   const activeLok = selectedLok === "G1206" ? g1206 : customLok;
@@ -143,7 +147,9 @@ function App() {
       trainNumber: parsedSummary.trainNumber,
       departureStation: parsedSummary.departureStation,
       zugStart,
-
+      lokVmax: activeLok.vmax,
+      fahrplanVmax: parseInt(timetableSpeed || "0", 10),
+  
       wagonWeightTons: String(parsedSummary.totalWeightTons),
       locoWeightTons: String(activeLok.weightTons),
       totalWeightTons: String(totalWeight),
@@ -170,7 +176,7 @@ function App() {
       totalLengthMeters: String(totalLength),
 
       speedCheckNo,
-      lowerVehicleSpeedKmh: speedCheckNo ? String(parsedSummary.lowerSpeedKmh ?? "") : "",
+      lowerSpeedKmh: speedCheckNo ? String(parsedSummary.lowerSpeedKmh ?? "") : "",
 
       dangerousGoodsPresent: parsedSummary.dangerousGoodsPresent,
 
@@ -187,21 +193,31 @@ function App() {
     }
 
     const missing = parseInt(state.missingBrakePercentage || "0", 10) || 0;
-    const lowerSpeed = parseInt(state.lowerVehicleSpeedKmh || "0", 10) || 0;
+    const lowerSpeed = parseInt(state.lowerSpeedKmh || "0", 10) || 0;
 
     const warnings: string[] = [];
 
-    if (missing > 0) {
-      warnings.push(
-        `Achtung! Mindestbremshundertstel nicht erreicht! Es fehlen ${missing} Bremshundertstel! Kontaktaufnahme mit BZ erforderlich!`
-      );
-    }
+    const fahrplanVmax = parseInt(timetableSpeed || "0", 10);
 
-    if (state.speedCheckNo && lowerSpeed > 0) {
-      warnings.push(
-        `Achtung! Im Zug läuft ein Fahrzeug, das nur mit ${lowerSpeed} km/h verkehren darf! Kontaktaufnahme mit BZ erforderlich!`
-      );
-    }
+const lokVmax = activeLok.vmax;
+
+if (!Number.isNaN(fahrplanVmax) && lokVmax < fahrplanVmax) {
+  warnings.push(
+    `Achtung! Eines der arbeitenden Triebfahrzeuge darf nur mit ${lokVmax} km/h fahren! Kontaktaufnahme mit BZ erforderlich!`
+  );
+}
+
+if (missing > 0) {
+  warnings.push(
+    `Achtung! Mindestbremshundertstel nicht erreicht! Es fehlen ${missing} Bremshundertstel! Kontaktaufnahme mit BZ erforderlich!`
+  );
+}
+
+if (state.speedCheckNo && lowerSpeed > 0) {
+  warnings.push(
+    `Achtung! Im Wagenzug läuft ein Fahrzeug, das nur mit ${lowerSpeed} km/h verkehren darf! Kontaktaufnahme mit BZ erforderlich!`
+  );
+}
 
     if (warnings.length > 0) {
       setWarningText(warnings.join("\n\n"));
@@ -484,6 +500,13 @@ function App() {
               onChange={(e) => setCustomLokLength(e.target.value)}
               placeholder="Länge [m]"
               style={{ width: "100%", padding: 12, marginTop: 10, boxSizing: "border-box" }}
+              />
+
+            <input
+              value={customLokVmax}
+              onChange={(e) => setCustomLokVmax(e.target.value)}
+              placeholder="Zul. Höchstgeschwindigkeit (km/h)"
+              style={{ width: "100%", padding: 12, marginTop: 8, boxSizing: "border-box" }}
             />
 
             <div

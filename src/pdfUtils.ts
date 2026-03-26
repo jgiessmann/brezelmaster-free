@@ -103,19 +103,45 @@ export async function createPdf(state: any) {
   drawCentered(state.totalLengthMeters || "", 771, 619);
 
   // Zeile 16 Geschwindigkeit
-  if (state.speedCheckNo) {
-    strike(577, 725);
-    drawCentered(
-  state.lowerVehicleSpeedKmh || "",
-  582,
-  763,
-  18,
-  (state.lowerVehicleSpeedKmh || "") !== "",
-  (state.lowerVehicleSpeedKmh || "") !== ""
-);
-  } else {
-    strike(610, 725);
-  }
+const lokVmax = Number(state.lokVmax || 0);
+const fahrplanVmax = Number(state.fahrplanVmax || 0);
+const wagenVmax = Number(state.lowerSpeedKmh || 999);
+
+const lokZuLangsam = lokVmax > 0 && fahrplanVmax > 0 && lokVmax < fahrplanVmax;
+const wagenZuLangsam = !!state.speedCheckNo;
+const gesamtVmax = Math.min(lokVmax || 999, wagenVmax || 999);
+const gesamtZuLangsam = lokZuLangsam || wagenZuLangsam;
+
+// Spalte Lok
+if (lokZuLangsam) {
+  strike(661, 726); // Lok Nein
+  drawCentered(String(lokVmax), 667, 763, 18, true, true);
+} else {
+  strike(698, 726); // Lok Ja
+}
+
+// Spalte Wagenzug
+if (wagenZuLangsam) {
+  strike(577, 725); // Wagenzug Nein
+  drawCentered(
+    state.lowerSpeedKmh || "",
+    582,
+    763,
+    18,
+    (state.lowerSpeedKmh || "") !== "",
+    (state.lowerSpeedKmh || "") !== ""
+  );
+} else {
+  strike(610, 725); // Wagenzug Ja
+}
+
+// Spalte Gesamtzug
+if (gesamtZuLangsam) {
+  strike(747, 726); // Gesamt Nein
+  drawCentered(String(gesamtVmax), 750, 763, 18, true, true);
+} else {
+  strike(782, 726); // Gesamt Ja
+}
 
   // Zeile 31 Gefahrgut
   if (state.dangerousGoodsPresent) {
