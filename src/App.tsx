@@ -24,6 +24,7 @@ function App() {
 
   const [selectedPdfName, setSelectedPdfName] = useState("");
   const [pdfStatusText, setPdfStatusText] = useState("Keine Wagenliste ausgewählt");
+  const isLoaded = selectedPdfName !== "";
 
   const [parsedSummary, setParsedSummary] = useState<ParsedSummary | null>(null);
 
@@ -254,7 +255,9 @@ function App() {
           style={{
             marginTop: 10,
             padding: 12,
-            background: "#f3f3f3",
+            background: isLoaded ? "#d4edda" :
+            "#f8d7da",
+            color: isLoaded ? "#1d8335" : "#e24b5a",
             borderRadius: 12,
             fontSize: 14,
             lineHeight: 1.5,
