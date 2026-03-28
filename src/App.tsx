@@ -65,18 +65,41 @@ function App() {
   const activeLok = selectedLok === "G1206" ? g1206 : customLok;
 
   function determineLocoBrakeWeight(
-    lok: LokType,
-    wagonWeight: number,
-    timetableBrakeMode: "P" | "G"
-  ): number {
-    const useG = timetableBrakeMode === "G" || wagonWeight >= 801;
+  lok: LokType,
+  wagonWeight: number,
+  wagonLength: number,
+  timetableBrakeMode: "P" | "G"
+): number {
+  if (timetableBrakeMode === "P") {
+    if (wagonWeight <= 800) {
+      if (wagonLength <= 500) {
+        return lok.brakeWeightP;
+      }
 
-    if (useG) {
+      if (wagonLength <= 600) {
+        return Math.floor(lok.brakeWeightP * 0.95);
+      }
+
+      if (wagonLength <= 700) {
+        return Math.floor(lok.brakeWeightP * 0.9);
+      }
+
+      return Math.floor(lok.brakeWeightP * 0.81);
+    }
+
+    if (wagonLength <= 700) {
       return Math.floor(lok.brakeWeightG * 0.75);
     }
 
-    return lok.brakeWeightP;
+    return Math.floor(lok.brakeWeightG * 0.7);
   }
+
+  if (wagonLength > 700) {
+    return Math.floor(lok.brakeWeightG * 0.95);
+  }
+
+  return lok.brakeWeightG;
+}
 
   async function handlePdfSelection(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -120,10 +143,11 @@ function App() {
     if (!parsedSummary) return null;
 
     const locoBrakeWeight = determineLocoBrakeWeight(
-      activeLok,
-      parsedSummary.totalWeightTons,
-      mode
-    );
+  activeLok,
+  parsedSummary.totalWeightTons,
+  parsedSummary.totalLengthMeters,
+  mode
+);
 
     const totalWeight = parsedSummary.totalWeightTons + activeLok.weightTons;
     const totalBrakeWeight = parsedSummary.totalBrakeWeightTons + locoBrakeWeight;
@@ -537,7 +561,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
             fontSize: 12,
           }}
         >
-          BREZEL-Master | Web-Version | by Jonas Gießmann
+          BREZEL-Master | Web-Version 2.0 | by Jonas Gießmann
         </div>
 
         </div>
