@@ -1,5 +1,7 @@
-import { useRef, useState } from "react";
-import type { ParsedSummary } from "./parser";
+import { useEffect, useRef, useState } from "react";
+import { createPdf } from "./pdfUtils";
+import { extractPdfText, parseTrainCheckerText, type ParsedSummary } from "./parser";
+
 
 type LokType = {
   name: string;
@@ -174,10 +176,8 @@ function App() {
       setSelectedPdfName(file.name);
       setPdfStatusText("PDF wird eingelesen ...");
 
-      const { extractPdfText, parseTrainCheckerText } = await import("./parser");
-
       const text = await extractPdfText(file);
-      const parsed = parseTrainCheckerText(text);
+    const parsed = parseTrainCheckerText(text);
 
       setParsedSummary(parsed);
       setPdfStatusText("PDF erfolgreich eingelesen");
@@ -293,7 +293,6 @@ function App() {
 
       setIsGeneratingPdf(true);
 
-    const { createPdf } = await import("./pdfUtils");
 
     if (state.directionChange && state.directionChangeStation.trim() !== "") {
   const wagonWeight = parseInt(state.wagonWeightTons || "0", 10);
@@ -371,7 +370,6 @@ if (state.speedCheckNo && lowerSpeed > 0) {
   setWarningOpen(false);
   setIsGeneratingPdf(true);
 
-  const { createPdf } = await import("./pdfUtils");
 
   if (pendingPdfState) {
     if (
