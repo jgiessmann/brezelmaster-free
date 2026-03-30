@@ -267,19 +267,21 @@ function parseRows(text: string): WagonRow[] {
       ? line.substring(line.indexOf(soleMatch[0]) + soleMatch[0].length).trim()
       : line;
 
-    const brakeMatch = afterSole.match(/^(-|\d{1,3})\s+(-|\d{1,3})\b/);
+    const brakeSectionMatch = afterSole.match(/^(-|\d{1,3})(?:\s+(-|\d{1,3}))?/);
 
-    const brakeP =
-      brakeMatch && brakeMatch[1] !== "-" ? parseIntSafe(brakeMatch[1]) : 0;
-    const brakeG =
-      brakeMatch && brakeMatch[2] !== "-" ? parseIntSafe(brakeMatch[2]) : 0;
+const brakeP =
+  brakeSectionMatch && brakeSectionMatch[1] !== "-"
+    ? parseIntSafe(brakeSectionMatch[1])
+    : 0;
+
+const brakeG = 0;
 
     const dangerousGoods =
       /\b\d{4}\b\s+\b\d(?:[.,]\d)?(?:\?\:\s*,\s*\d(?:[.,]\d)?)?\b/.test(line) ||
       /\bUN\b/i.test(line);
 
     const vmaxClassMatches = [
-  ...line.matchAll(/\b(\d{2,3})\b\s+\b([A-Z])\b/g),
+  ...line.matchAll(/\b(\d{2,3})\b\s+\b([A-Z]\d?)\b/g),
 ];
 
 const vmax =
