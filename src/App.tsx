@@ -414,6 +414,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
           style={{
             width: "100%",
             padding: 12,
+            fontSize: 18,
             marginTop: 10,
             background: "#6E53B3",
             color: "white",
@@ -429,9 +430,19 @@ if (state.speedCheckNo && lowerSpeed > 0) {
           style={{
             marginTop: 10,
             padding: 12,
-            background: isLoaded ? "#d4edda" :
-            "#f8d7da",
-            color: isLoaded ? "#1d8335" : "#e24b5a",
+            background:
+  pdfStatusText === "PDF wird eingelesen ..."
+    ? "#fff3cd"
+    : isLoaded
+    ? "#d4edda"
+    : "#f8d7da",
+
+color:
+  pdfStatusText === "PDF wird eingelesen ..."
+    ? "#856404"
+    : isLoaded
+    ? "#1d8335"
+    : "#e24b5a",
             borderRadius: 12,
             fontSize: 14,
             lineHeight: 1.5,
@@ -452,6 +463,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
         style={{
         width: "100%",
         padding: 12,
+        fontSize: 18,
         marginTop: 8,
         background: selectedLok === "list" ? "#1976D2" : "#B0BEC5",
         color: "white",
@@ -471,6 +483,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
           style={{
             width: "100%",
             padding: 12,
+            fontSize: 18,
             marginTop: 8,
             background: selectedLok === "custom" ? "#1976D2" : "#B0BEC5",
             color: "white",
@@ -496,6 +509,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
     style={{
       flex: 1,
       padding: "14px 0",
+      fontSize: 18,
       background: zugStart ? "#1976D2" : "#CFD8DC",
       color: "white",
       border: "none",
@@ -512,6 +526,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
     style={{
       flex: 1,
       padding: "14px 0",
+      fontSize: 18,
       background: !zugStart ? "#1976D2" : "#CFD8DC",
       color: "white",
       border: "none",
@@ -536,6 +551,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
     style={{
       flex: 1,
       padding: "14px 0",
+      fontSize: 18,
       background: !directionChange ? "#1976D2" : "#CFD8DC",
       color: "white",
       border: "none",
@@ -555,6 +571,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
     style={{
       flex: 1,
       padding: "14px 0",
+      fontSize: 18,
       background: directionChange ? "#1976D2" : "#CFD8DC",
       color: "white",
       border: "none",
@@ -574,6 +591,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
             style={{
               flex: 1,
               padding: 12,
+              fontSize: 18,
               background: mode === "P" ? "#1976D2" : "#B0BEC5",
               color: "white",
               border: "none",
@@ -589,6 +607,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
             style={{
               flex: 1,
               padding: 12,
+              fontSize: 18,
               background: mode === "G" ? "#1976D2" : "#B0BEC5",
               color: "white",
               border: "none",
@@ -647,6 +666,7 @@ if (state.speedCheckNo && lowerSpeed > 0) {
         style={{
         width: "100%",
         padding: 14,
+        fontSize: 18,
         marginTop: 20,
         background: "#6E53B3",
         color: "white",
