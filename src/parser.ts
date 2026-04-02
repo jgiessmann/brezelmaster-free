@@ -154,6 +154,14 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
       ? sum.brakeG
       : sum.brakeP;
 
+      console.log("DEBUG PARSER:", {
+        rows,
+        sum,
+        firstBrakeWeight,
+        activeRows,
+        finalBrake,
+      });
+
   return {
     trainNumber,
     departureStation,
