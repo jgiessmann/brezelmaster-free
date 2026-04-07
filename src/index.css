@@ -203,7 +203,12 @@ body {
 .lok-box.active {
   border: 2px solid #2d6cdf;
   background: #e8f0ff;
+  color: #111827;
   box-shadow: 0 8px 18px rgba(45, 108, 223, 0.16);
+}
+
+.lok-box.active span {
+  color: #4b5563;
 }
 
 /* ROWS / SETTINGS */
@@ -398,20 +403,30 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
+
   display: flex;
-  align-items: center;
+  align-items: flex-start;   
   justify-content: center;
+
   padding: 20px;
   z-index: 1000;
+
+  overflow-y: auto;          
 }
 
 .modal-card {
   width: 100%;
   max-width: 420px;
+
   background: #ffffff;
   border-radius: 20px;
   padding: 20px;
+
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+
+  max-height: 90vh;          
+  overflow-y: auto;          
+  padding-bottom: 24px;
 }
 
 .modal-card h2 {
@@ -450,16 +465,15 @@ body {
   width: 100%;
 }
 
-.modal-card input {
+.modal-card input,
+.modal-card select,
+.modal-card textarea {
   width: 100%;
   margin-bottom: 14px;
-
   padding: 16px 18px;
   font-size: 18px;
-
   border-radius: 14px;
   border: 1px solid #d7dfeb;
-
   background: #ffffff;
 }
 
@@ -477,7 +491,9 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-.modal-card input:focus {
+.modal-card input:focus,
+.modal-card select:focus,
+.modal-card textarea:focus {
   outline: none;
   border-color: #2d6cdf;
   box-shadow: 0 0 0 3px rgba(45, 108, 223, 0.15);
@@ -505,12 +521,17 @@ input[type="number"] {
   gap: 10px;
   justify-content: flex-end;
   margin-top: 18px;
+  padding-top: 10px;
+  background: #ffffff;
+  position: sticky;
+  bottom: 0;
 }
 
 .modal-actions .primary,
 .modal-actions .secondary {
   width: auto;
   min-width: 120px;
+  flex-shrink: 0;
 }
 
 .switch-with-text {
@@ -604,4 +625,79 @@ input[type="number"] {
   display: flex;
   justify-content: center;
   gap: 90px;
+}
+
+.modal-card textarea {
+  min-height: 110px;
+  resize: none;
+  font-family: inherit;
+}
+
+.modal-card label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2a44;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.modal-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-card::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
+.modal-card button {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #d7dfeb;
+  background: #eef2f7;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.modal-card button:hover {
+  background: #e2e8f0;
+}
+
+.modal-card button.active:not(.lok-box) {
+  background: #2d6cdf;
+  color: white;
+  border: 2px solid #2d6cdf;
+}
+
+.modal-card textarea {
+  width: 100%;
+  min-height: 90px;
+  margin-bottom: 14px;
+
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #d7dfeb;
+
+  font-size: 14px;
+  resize: vertical;
+}
+
+.modal-actions .primary {
+  background: linear-gradient(135deg, #2d6cdf, #1f4fbf);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-actions .secondary {
+  background: #f1f1f1;
+  color: #333;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
 }

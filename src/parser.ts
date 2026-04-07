@@ -7,6 +7,8 @@ export type ParsedSummary = {
   trainNumber: string;
   departureStation: string;
   destinationStation: string;
+  wagonCount: number,
+  highestRouteClass: string;
   firstVehicleNumber: string;
   firstBrakeWeight: number;
   lastVehicleNumber: string;
@@ -14,6 +16,8 @@ export type ParsedSummary = {
   totalLengthMeters: number;
   totalWeightTons: number;
   totalBrakeWeightTons: number;
+  totalFestKn: number;
+  fSoleBrakeWeightTons: number;
   multiReleaseBrakeCount: number;
   kLllBrakeCount: number;
   dBrakeCount: number;
@@ -29,6 +33,7 @@ type WagonRow = {
   brakeG: number;
   dangerousGoods: boolean;
   vmax: number | null;
+  routeClass: string | null;
 };
 
 type Summary = {
@@ -37,6 +42,7 @@ type Summary = {
   weightTons: number;
   brakeP: number;
   brakeG: number;
+  festKn: number;
 };
 
 export async function extractPdfText(file: File): Promise<string> {
@@ -112,8 +118,12 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   );
 
   const departureStation = findDepartureStation(normalized);
+  const destinationStation = findDestinationStation(normalized);
 
   const rows = parseRows(normalized);
+  const highestRouteClass = findHighestRouteClass(rows);
+
+  const wagonCount = rows.length;
   const lastVehicle = rows.length > 0 ? rows[rows.length - 1].wagonNumber : "";
 
   const firstVehicle = rows.length > 0 ? rows[0].wagonNumber : "";
@@ -121,6 +131,12 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   rows.length > 0 ? Math.max(rows[0].brakeP, rows[0].brakeG) : 0;
 
   const activeRows = rows.filter((row) => row.brakeP > 0 || row.brakeG > 0);
+
+  const fSoleBrakeWeightTons = rows
+  .filter((row) => row.sole === "F")
+  .reduce((sum, row) => {
+    return sum + Math.max(row.brakeP, row.brakeG);
+  }, 0);
 
   const multiRelease = activeRows.length;
   const kLll = activeRows.filter((row) =>
@@ -165,7 +181,9 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   return {
     trainNumber,
     departureStation,
-    destinationStation: "",
+    destinationStation,
+    wagonCount,
+    highestRouteClass,
     firstVehicleNumber: firstVehicle,
     firstBrakeWeight,
     lastVehicleNumber: lastVehicle,
@@ -173,6 +191,8 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
     totalLengthMeters: sum.lengthMeters,
     totalWeightTons: sum.weightTons,
     totalBrakeWeightTons: finalBrake,
+    totalFestKn: sum.festKn,
+    fSoleBrakeWeightTons,
     multiReleaseBrakeCount: multiRelease,
     kLllBrakeCount: kLll,
     dBrakeCount: dCount,
@@ -203,6 +223,17 @@ function findDepartureStation(text: string): string {
   return raw.split("(")[0].trim();
 }
 
+function findDestinationStation(text: string): string {
+  const raw = findFirstGroup(
+    text,
+    "Bis Bhf\\.\\s+(.+?)\\s+\\(DE\\)",
+    "Bis Bhf\\.\\s+(.+?)\\s+Erstellungszeitpunkt",
+    "Bis Bhf\\.\\s+(.+?)\\s+Seite"
+  );
+
+  return raw.split("(")[0].trim();
+}
+
 function parseSummary(text: string): Summary {
   const sumLine =
     text
@@ -221,19 +252,41 @@ function parseSummary(text: string): Summary {
       weightTons: Math.round(parseGermanIntWithDots(nums[3]) / 1000),
       brakeP: parseIntSafe(nums[4]),
       brakeG: parseIntSafe(nums[5]),
+      festKn: parseIntSafe(nums[6]),
     };
   }
 
   // Fallbacks für andere Layouts
   if (nums.length === 6) {
+  const value5 = parseIntSafe(nums[5]);
+
+  // Heuristik:
+  // Fest [kN] ist IMMER deutlich kleiner als Bremsgewicht (P/G)
+  // → meistens < 400
+  // → Bremsgewicht meist viel größer
+
+  if (value5 < 500) {
+    // KEINE G-Spalte → letzter Wert ist Fest
     return {
       axles: parseIntSafe(nums[0]),
       lengthMeters: parseGermanDouble(nums[1]),
       weightTons: Math.round(parseGermanIntWithDots(nums[3]) / 1000),
       brakeP: parseIntSafe(nums[4]),
-      brakeG: parseIntSafe(nums[5]),
+      brakeG: 0,
+      festKn: value5,
+    };
+  } else {
+    // FALLBACK (sehr selten)
+    return {
+      axles: parseIntSafe(nums[0]),
+      lengthMeters: parseGermanDouble(nums[1]),
+      weightTons: Math.round(parseGermanIntWithDots(nums[3]) / 1000),
+      brakeP: parseIntSafe(nums[4]),
+      brakeG: value5,
+      festKn: 0,
     };
   }
+}
 
   if (nums.length === 5) {
     return {
@@ -242,6 +295,7 @@ function parseSummary(text: string): Summary {
       weightTons: Math.round(parseGermanIntWithDots(nums[2]) / 1000),
       brakeP: parseIntSafe(nums[3]),
       brakeG: parseIntSafe(nums[4]),
+      festKn: 0,
     };
   }
 
@@ -251,6 +305,7 @@ function parseSummary(text: string): Summary {
     weightTons: 0,
     brakeP: 0,
     brakeG: 0,
+    festKn: 0,
   };
 }
 
@@ -277,26 +332,34 @@ function parseRows(text: string): WagonRow[] {
 
     const brakeSectionMatch = afterSole.match(/^(-|\d{1,3})(?:\s+(-|\d{1,3}))?/);
 
-const brakeP =
-  brakeSectionMatch && brakeSectionMatch[1] !== "-"
-    ? parseIntSafe(brakeSectionMatch[1])
-    : 0;
+    const brakeP =
+      brakeSectionMatch && brakeSectionMatch[1] !== "-"
+        ? parseIntSafe(brakeSectionMatch[1])
+        : 0;
 
-const brakeG = 0;
+    const brakeG = 0;
 
     const dangerousGoods =
       /\b\d{4}\b\s+\b\d(?:[.,]\d)?(?:\?\:\s*,\s*\d(?:[.,]\d)?)?\b/.test(line) ||
       /\bUN\b/i.test(line);
 
     const vmaxClassMatches = [
-  ...line.matchAll(/\b(\d{2,3})\b\s+\b([A-Z]\d?)\b/g),
-];
+      ...line.matchAll(/\b(\d{2,3})\b\s+\b([A-Z]\d?)\b/g),
+    ];
 
-const vmax =
-  vmaxClassMatches.length > 0
-    ? parseIntSafe(vmaxClassMatches[vmaxClassMatches.length - 1][1])
-    : null;
-    
+    const vmax =
+      vmaxClassMatches.length > 0
+        ? parseIntSafe(vmaxClassMatches[vmaxClassMatches.length - 1][1])
+        : null;
+
+    const routeClassMatches = [
+      ...line.matchAll(/\b(A|B|C2|C3|C4|D2|D3|D4)\b/g),
+    ];
+
+    const routeClass =
+      routeClassMatches.length > 0
+        ? routeClassMatches[routeClassMatches.length - 1][1]
+        : null;
 
     rows.push({
       wagonNumber: wagon,
@@ -305,10 +368,28 @@ const vmax =
       brakeG,
       dangerousGoods,
       vmax,
+      routeClass,
     });
   }
 
   return rows;
+}
+
+function findHighestRouteClass(rows: WagonRow[]): string {
+  const order = ["A", "B", "C2", "C3", "C4", "D2", "D3", "D4"];
+
+  let highestIndex = -1;
+
+  for (const row of rows) {
+    if (!row.routeClass) continue;
+
+    const index = order.indexOf(row.routeClass);
+    if (index > highestIndex) {
+      highestIndex = index;
+    }
+  }
+
+  return highestIndex >= 0 ? order[highestIndex] : "";
 }
 
 function findFirstGroup(text: string, ...patterns: string[]): string {

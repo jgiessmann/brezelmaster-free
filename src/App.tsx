@@ -1,13 +1,77 @@
 import { useEffect, useRef, useState } from "react";
 import { createPdf } from "./pdfUtils";
 import { extractPdfText, parseTrainCheckerText, type ParsedSummary } from "./parser";
+type InternationalCountry = {
+  code: string;
+  label: string;
+  trainCategory: string;
+  vmax: string;
+};
 
 function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  function updateTimetableSpeedFromCountries(countries: InternationalCountry[]) {
+  const vmaxValues = countries
+    .map((country) => Number(country.vmax))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  if (vmaxValues.length === 0) return;
+
+  const maxVmax = Math.max(...vmaxValues);
+  setTimetableSpeedInput(String(maxVmax));
+}
+
   const [zugStart, setZugStart] = useState(true);
+  const [doubleTraction, setDoubleTraction] = useState(false);
   const [directionChange, setDirectionChange] = useState(false);
+  const [secondLocoEnabled, setSecondLocoEnabled] = useState<null | boolean>(null);
+const [secondLokSelectOpen, setSecondLokSelectOpen] = useState(false);
+const [secondCustomLokOpen, setSecondCustomLokOpen] = useState(false);
+const [secondSelectedLok, setSecondSelectedLok] = useState<"list" | "custom">("list");
+const [secondSelectedLokName, setSecondSelectedLokName] = useState("G1206");
+
+const [secondCustomLokName, setSecondCustomLokName] = useState("");
+const [secondLocoVehicleNumber, setSecondLocoVehicleNumber] = useState("");
+const [secondLocoSoleType, setSecondLocoSoleType] = useState<
+  "F" | "D" | "L" | "LL" | "K" | ""
+>("");
+const [secondCustomLokWeight, setSecondCustomLokWeight] = useState("");
+const [secondCustomLokBrakeP, setSecondCustomLokBrakeP] = useState("");
+const [secondCustomLokBrakeG, setSecondCustomLokBrakeG] = useState("");
+const [secondCustomLokLength, setSecondCustomLokLength] = useState("");
+const [secondCustomLokVmax, setSecondCustomLokVmax] = useState("");
+const [secondCustomLokAxles, setSecondCustomLokAxles] = useState("");
   const [mode, setMode] = useState<"P" | "G">("P");
+  const [printMode, setPrintMode] = useState<"national" | "international">("national");
+  const [internationalModalOpen, setInternationalModalOpen] = useState(false);
+
+  const [doubleTractionModalOpen, setDoubleTractionModalOpen] = useState(false);
+const [doubleTractionSecondVehicleNumber, setDoubleTractionSecondVehicleNumber] = useState("");
+const [doubleTractionSecondSoleType, setDoubleTractionSecondSoleType] = useState<
+  "F" | "D" | "L" | "LL" | "K" | ""
+>("");
+const [doubleTractionModalError, setDoubleTractionModalError] = useState(false);
+
+const [secondLocoInsertPosition, setSecondLocoInsertPosition] = useState<"1" | "2" | "">("");
+const [secondLocoInsertPositionError, setSecondLocoInsertPositionError] = useState(false);
+
+  const [locoVehicleNumber, setLocoVehicleNumber] = useState("");
+
+  const [selectedCountries, setSelectedCountries] = useState<InternationalCountry[]>([]);
+
+  const [locoSoleType, setLocoSoleType] = useState<
+  "F" | "D" | "L" | "LL" | "K" | ""
+  >("");
+
+  const [etcsEnabled, setEtcsEnabled] = useState<null | boolean>(null);
+const [etcsLevel, setEtcsLevel] = useState<"L0" | "L1" | "L2" | "L3" | "">("");
+const [wasteTransportPresent, setWasteTransportPresent] = useState<null | boolean>(null);
+const [exceptionalConsignment, setExceptionalConsignment] = useState<null | boolean>(null);
+const [bzaNumber, setBzaNumber] = useState("");
+const [remarksDuringTrip, setRemarksDuringTrip] = useState("");
+const [trainSpecialties, setTrainSpecialties] = useState("");
+const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null | boolean>(null);
   const [selectedPdfName, setSelectedPdfName] = useState("");
   const [pdfStatus, setPdfStatus] = useState<"idle" | "loading" | "success">("idle");
   const [selectedLokName, setSelectedLokName] = useState("G1206");
@@ -21,6 +85,7 @@ function App() {
     lengthMeters: 15,
     vmax: 100,
     axles: 4,
+    festKn: 41,
   },
   {
     name: "G1203",
@@ -30,6 +95,7 @@ function App() {
     lengthMeters: 13,
     vmax: 60,
     axles: 4,
+    festKn: 41,
   },
   {
     name: "V100",
@@ -39,6 +105,7 @@ function App() {
     lengthMeters: 13,
     vmax: 100,
     axles: 4,
+    festKn: 41,
   },
   {
     name: "DE18",
@@ -48,6 +115,7 @@ function App() {
     lengthMeters: 17,
     vmax: 120,
     axles: 4,
+    festKn: 41,
   },
 ];
 const [customLokOpen, setCustomLokOpen] = useState(false);
@@ -59,7 +127,14 @@ const [customLokBrakeG, setCustomLokBrakeG] = useState("");
 const [customLokLength, setCustomLokLength] = useState("");
 const [customLokVmax, setCustomLokVmax] = useState("");
 const [customLokAxles, setCustomLokAxles] = useState("");
+const [customLokFestKn, setCustomLokFestKn] = useState("");
+const [secondCustomLokFestKn, setSecondCustomLokFestKn] = useState("");
 const [directionModalOpen, setDirectionModalOpen] = useState(false);
+
+const [reduceToOneLocoAfterDirectionChange, setReduceToOneLocoAfterDirectionChange] = useState(false);
+const [removedLocoAfterDirectionChange, setRemovedLocoAfterDirectionChange] = useState<"loco1" | "loco2" | "">("");
+
+
 
 const [directionStation, setDirectionStation] = useState("");
 const [parsedSummary, setParsedSummary] = useState<ParsedSummary | null>(null);
@@ -73,6 +148,12 @@ useEffect(() => {
     setIssuedByName(savedName);
   }
 }, []);
+const [issuerEvu, setIssuerEvu] = useState(
+  localStorage.getItem("issuerEvu") || ""
+);
+useEffect(() => {
+  localStorage.setItem("issuerEvu", issuerEvu);
+}, [issuerEvu]);
 
 const [warningOpen, setWarningOpen] = useState(false);
 const [pendingPdfState, setPendingPdfState] = useState<any | null>(null);
@@ -191,8 +272,33 @@ const activeLok =
         lengthMeters: Number(customLokLength) || 0,
         vmax: Number(customLokVmax) || 0,
         axles: Number(customLokAxles) || 0,
+        festKn: Number(customLokFestKn) || 0,
       }
     : selectedListLok;
+
+    const secondSelectedListLok =
+  locomotives.find((lok) => lok.name === secondSelectedLokName) || locomotives[0];
+
+const secondActiveLok =
+  secondLocoEnabled !== true
+    ? null
+    : secondSelectedLok === "custom"
+    ? {
+        name: secondCustomLokName || "Eigene Lok 2",
+        weightTons: Number(secondCustomLokWeight) || 0,
+        brakeWeightP: Number(secondCustomLokBrakeP) || 0,
+        brakeWeightG: Number(secondCustomLokBrakeG) || 0,
+        lengthMeters: Number(secondCustomLokLength) || 0,
+        vmax: Number(secondCustomLokVmax) || 0,
+        axles: Number(secondCustomLokAxles) || 0,
+        festKn: Number(secondCustomLokFestKn) || 0,
+      }
+    : secondSelectedListLok;
+
+    const tractionSecondLok =
+  doubleTraction
+    ? { ...activeLok }
+    : secondActiveLok;
 
   async function handleGeneratePdf() {
     setIsGenerating(true);
@@ -226,21 +332,90 @@ if (hasMainError) {
   mode
 );
 
+const secondLocoBrakeWeight =
+  tractionSecondLok
+    ? determineLocoBrakeWeight(
+        tractionSecondLok,
+        parsedSummary.totalWeightTons,
+        parsedSummary.totalLengthMeters,
+        mode
+      )
+    : 0;
+
+
+
+    const firstLocoStaysAfterDirectionChange =
+  !(doubleTraction &&
+    directionChange &&
+    reduceToOneLocoAfterDirectionChange &&
+    removedLocoAfterDirectionChange === "loco1");
+
+const secondLocoStaysAfterDirectionChange =
+  tractionSecondLok
+    ? !(doubleTraction &&
+        directionChange &&
+        reduceToOneLocoAfterDirectionChange &&
+        removedLocoAfterDirectionChange === "loco2")
+    : false;
+
 const totalWeight =
-  parsedSummary.totalWeightTons + activeLok.weightTons;
+  parsedSummary.totalWeightTons +
+  activeLok.weightTons +
+  (doubleTraction && tractionSecondLok ? tractionSecondLok.weightTons : 0);
 
 const totalBrakeWeight =
-  parsedSummary.totalBrakeWeightTons + locoBrakeWeight;
+  parsedSummary.totalBrakeWeightTons +
+  locoBrakeWeight +
+  (doubleTraction && tractionSecondLok ? secondLocoBrakeWeight : 0);
 
 const totalAxles =
-  parsedSummary.totalAxles + activeLok.axles;
+  parsedSummary.totalAxles +
+  activeLok.axles +
+  (doubleTraction && tractionSecondLok ? tractionSecondLok.axles : 0);
 
 const totalLength =
-  Math.ceil(parsedSummary.totalLengthMeters + activeLok.lengthMeters);
+  Math.ceil(
+    parsedSummary.totalLengthMeters +
+    activeLok.lengthMeters +
+    (doubleTraction && tractionSecondLok ? tractionSecondLok.lengthMeters : 0)
+  );
+
+  const directionChangeLocoCount =
+  (firstLocoStaysAfterDirectionChange ? 1 : 0) +
+  (secondLocoStaysAfterDirectionChange ? 1 : 0);
+
+const directionChangeLocoWeight =
+  (firstLocoStaysAfterDirectionChange ? activeLok.weightTons : 0) +
+  (secondLocoStaysAfterDirectionChange && tractionSecondLok ? tractionSecondLok.weightTons : 0);
+
+const directionChangeLocoBrakeWeight =
+  (firstLocoStaysAfterDirectionChange ? locoBrakeWeight : 0) +
+  (secondLocoStaysAfterDirectionChange && tractionSecondLok ? secondLocoBrakeWeight : 0);
+
+const directionChangeLocoLength =
+  (firstLocoStaysAfterDirectionChange ? activeLok.lengthMeters : 0) +
+  (secondLocoStaysAfterDirectionChange && tractionSecondLok ? tractionSecondLok.lengthMeters : 0);
+
+const directionChangeTotalVehicleCount =
+  parsedSummary.wagonCount + directionChangeLocoCount;
+
+const directionChangeTotalLength =
+  Math.ceil(parsedSummary.totalLengthMeters + directionChangeLocoLength);
+
+const directionChangeTotalWeight =
+  parsedSummary.totalWeightTons + directionChangeLocoWeight;
+
+const directionChangeTotalBrakeWeight =
+  parsedSummary.totalBrakeWeightTons + directionChangeLocoBrakeWeight;
 
   const availableBrakePercentage =
   totalWeight > 0
     ? Math.floor((totalBrakeWeight * 100) / totalWeight)
+    : 0;
+
+    const directionChangeAvailableBrakePercentage =
+  directionChangeTotalWeight > 0
+    ? Math.floor((directionChangeTotalBrakeWeight * 100) / directionChangeTotalWeight)
     : 0;
 
     const minimum = Number(minimumBrakePercentageInput) || 0;
@@ -248,6 +423,11 @@ const totalLength =
     const missingBrakePercentage =
   availableBrakePercentage < minimum
     ? minimum - availableBrakePercentage
+    : 0;
+
+    const directionChangeMissingBrakePercentage =
+  directionChangeAvailableBrakePercentage < minimum
+    ? minimum - directionChangeAvailableBrakePercentage
     : 0;
 
     const timetableSpeed = Number(timetableSpeedInput) || 0;
@@ -259,6 +439,219 @@ const lokTooSlow =
   timetableSpeed > 0 &&
   parsedSummary.lowerSpeedKmh !== null &&
   parsedSummary.lowerSpeedKmh < timetableSpeed;
+
+  const limitingVmaxCandidates: number[] = [];
+
+if (lokTooSlow) {
+  limitingVmaxCandidates.push(activeLok.vmax);
+}
+
+if (wagonTooSlow && parsedSummary.lowerSpeedKmh !== null) {
+  limitingVmaxCandidates.push(parsedSummary.lowerSpeedKmh);
+}
+
+const limitingVmax =
+  limitingVmaxCandidates.length > 0
+    ? Math.min(...limitingVmaxCandidates)
+    : null;
+
+const vmaxRemark =
+  limitingVmax !== null ? `Vmax ${limitingVmax} km/h beachten!` : "";
+
+  const etcsDisplay = etcsEnabled ? etcsLevel : "";
+const ntcDisplay = etcsEnabled === false || etcsEnabled === true ? "NTC" : "";
+
+const locoFestKn = activeLok.festKn || 0;
+const secondLocoFestKn = tractionSecondLok ? tractionSecondLok.festKn || 0 : 0;
+
+const workingLocoWeightTons =
+  activeLok.weightTons +
+  (doubleTraction && tractionSecondLok ? tractionSecondLok.weightTons : 0);
+
+const workingLocoLengthMeters =
+  activeLok.lengthMeters +
+  (doubleTraction && tractionSecondLok ? tractionSecondLok.lengthMeters : 0);
+
+const workingLocoAxles =
+  activeLok.axles +
+  (doubleTraction && tractionSecondLok ? tractionSecondLok.axles : 0);
+
+const workingLocoBrakeWeightTons =
+  locoBrakeWeight +
+  (doubleTraction && tractionSecondLok ? secondLocoBrakeWeight : 0);
+
+const workingLocoFestKn =
+  locoFestKn +
+  (doubleTraction && tractionSecondLok ? secondLocoFestKn : 0);
+
+const totalFestKn =
+  parsedSummary.totalFestKn +
+  locoFestKn +
+  (doubleTraction && tractionSecondLok ? secondLocoFestKn : 0);
+
+const directionChangeLocoFestKn =
+  (firstLocoStaysAfterDirectionChange ? locoFestKn : 0) +
+  (secondLocoStaysAfterDirectionChange && tractionSecondLok ? secondLocoFestKn : 0);
+
+const directionChangeTotalFestKn =
+  parsedSummary.totalFestKn + directionChangeLocoFestKn;
+
+  let stateToGenerate: any = null;
+let reversedStateToGenerate: any = null;
+
+if (printMode === "international") {
+  const internationalState = {
+    issuerEvu,
+    countries: selectedCountries,
+    etcsDisplay,
+    ntcDisplay,
+    dangerousGoodsPresent: parsedSummary.dangerousGoodsPresent,
+    wasteTransportPresent,
+    exceptionalConsignment,
+    doubleTraction,
+
+    firstVehicleNumber: parsedSummary.firstVehicleNumber,
+    lastVehicleNumber: parsedSummary.lastVehicleNumber,
+
+    bzaNumber,
+    remarksDuringTrip,
+    vmaxRemark,
+    trainSpecialties,
+    additionalRestrictionDocs,
+
+    fSoleBrakeWeightTons:
+      parsedSummary.fSoleBrakeWeightTons > 0
+        ? String(parsedSummary.fSoleBrakeWeightTons)
+        : "",
+
+    locoVehicleNumber,
+    locoName: activeLok.name,
+
+    secondLocoFestKn: tractionSecondLok ? String(secondLocoFestKn) : "",
+    secondLocoVehicleNumber: doubleTraction
+  ? doubleTractionSecondVehicleNumber
+  : secondLocoVehicleNumber,
+    secondLocoName: tractionSecondLok ? tractionSecondLok.name : "",
+    secondLocoAxles: tractionSecondLok ? String(tractionSecondLok.axles) : "",
+    secondLocoLengthMeters: tractionSecondLok ? String(tractionSecondLok.lengthMeters) : "",
+    secondLocoWeightTons: tractionSecondLok ? String(tractionSecondLok.weightTons) : "",
+    secondLocoSoleType: doubleTraction
+  ? doubleTractionSecondSoleType
+  : secondLocoSoleType,
+    secondLocoMode: mode,
+    secondLocoBrakeWeightTons: tractionSecondLok ? String(secondLocoBrakeWeight) : "",
+    secondLocoInsertPosition,
+
+    reduceToOneLocoAfterDirectionChange,
+removedLocoAfterDirectionChange,
+firstLocoRemark:
+  doubleTraction &&
+  directionChange &&
+  reduceToOneLocoAfterDirectionChange &&
+  removedLocoAfterDirectionChange === "loco1" &&
+  directionStation.trim() !== ""
+    ? `nur bis ${directionStation}`
+    : "",
+
+secondLocoRemark:
+  doubleTraction &&
+  directionChange &&
+  reduceToOneLocoAfterDirectionChange &&
+  removedLocoAfterDirectionChange === "loco2" &&
+  directionStation.trim() !== ""
+    ? `nur bis ${directionStation}`
+    : doubleTraction && directionChange && directionStation.trim() !== ""
+    ? `(ab ${directionStation} Spitze)`
+    : !doubleTraction &&
+      tractionSecondLok &&
+      directionStation.trim() !== "" &&
+      secondLocoInsertPosition === "1"
+    ? `ab ${directionStation} Spitze`
+    : !doubleTraction &&
+      tractionSecondLok &&
+      directionStation.trim() !== "" &&
+      secondLocoInsertPosition === "2"
+    ? `ab ${directionStation}`
+    : "",
+
+    locoSoleType,
+    locoWeightTons: String(workingLocoWeightTons),
+    locoLengthMeters: String(workingLocoLengthMeters),
+    totalLengthMeters: String(totalLength),
+    locoAxles: String(workingLocoAxles),
+    locoBrakeWeightTons: String(workingLocoBrakeWeightTons),
+    totalBrakeWeightTons: String(totalBrakeWeight),
+    totalWeightTons: String(totalWeight),
+
+    firstLocoVehicleNumber: locoVehicleNumber,
+firstLocoName: activeLok.name,
+firstLocoAxles: String(activeLok.axles),
+firstLocoLengthMeters: String(activeLok.lengthMeters),
+firstLocoWeightTons: String(activeLok.weightTons),
+firstLocoSoleType: locoSoleType,
+firstLocoMode: mode,
+firstLocoBrakeWeightTons: String(locoBrakeWeight),
+firstLocoFestKn: String(locoFestKn),
+
+
+    locoFestKn: String(workingLocoFestKn),
+    totalFestKn: String(totalFestKn),
+    directionChangeTotalFestKn: String(directionChangeTotalFestKn),
+
+    wagonFestKn: String(parsedSummary.totalFestKn),
+    directionChangeWagonFestKn: String(parsedSummary.totalFestKn),
+
+    wagonCount: String(parsedSummary.wagonCount),
+    totalVehicleCount: String(
+      parsedSummary.wagonCount + 1 + (doubleTraction ? 1 : 0)
+    ),
+    workingLocoCount: String(1 + (doubleTraction ? 1 : 0)),
+
+    wagonLengthMeters: String(Math.ceil(parsedSummary.totalLengthMeters)),
+    wagonBrakeWeightTons: String(parsedSummary.totalBrakeWeightTons),
+    wagonWeightTons: String(parsedSummary.totalWeightTons),
+
+    directionChange,
+    directionChangeStation: directionStation,
+
+    directionChangeLocoCount: String(directionChangeLocoCount),
+    directionChangeLocoWeightTons: String(directionChangeLocoWeight),
+    directionChangeLocoBrakeWeightTons: String(directionChangeLocoBrakeWeight),
+    directionChangeLocoLengthMeters: String(directionChangeLocoLength),
+    directionChangeLocoFestKn: String(directionChangeLocoFestKn),
+    directionChangeTotalVehicleCount: String(directionChangeTotalVehicleCount),
+    directionChangeTotalLengthMeters: String(directionChangeTotalLength),
+    directionChangeTotalWeightTons: String(directionChangeTotalWeight),
+    directionChangeTotalBrakeWeightTons: String(directionChangeTotalBrakeWeight),
+    directionChangeAvailableBrakePercentage: String(directionChangeAvailableBrakePercentage),
+    directionChangeMissingBrakePercentage:
+      directionChangeMissingBrakePercentage > 0
+        ? String(directionChangeMissingBrakePercentage)
+        : "",
+
+    availableBrakePercentage: String(availableBrakePercentage),
+    mode,
+    issuedByName,
+    highestRouteClass: parsedSummary.highestRouteClass,
+    minimumBrakePercentage: String(minimum),
+    missingBrakePercentage:
+      missingBrakePercentage > 0 ? String(missingBrakePercentage) : "",
+
+    trainNumber: parsedSummary.trainNumber,
+    departureStation: parsedSummary.departureStation,
+    destinationStation: parsedSummary.destinationStation,
+    date: new Date().toLocaleDateString("de-DE"),
+  };
+
+stateToGenerate = {
+    mode: "international",
+    data: internationalState,
+  };
+
+}
+
+
+
 
   const state = {
     date: new Date().toLocaleDateString("de-DE"),
@@ -303,6 +696,21 @@ const lokTooSlow =
     issuedByName,
   };
 
+  if (printMode !== "international") {
+  if (directionChange && directionStation.trim() !== "") {
+    reversedStateToGenerate = {
+      ...state,
+      departureStation: directionStation,
+      lastVehicleNumber: state.firstVehicleNumber,
+    };
+  }
+
+  stateToGenerate = {
+    mode: "national",
+    data: state,
+  };
+}
+
   // ❗ Richtungswechsel-Block
 if (directionChange && directionStation.trim() !== "") {
   const wagonWeight = parsedSummary.totalWeightTons;
@@ -311,7 +719,11 @@ if (directionChange && directionStation.trim() !== "") {
     setWarningItems([
       "Achtung! Richtungswechsel unzulässig! Wagenzuggewicht größer 1200T. Neue Wagenliste erforderlich!"
     ]);
-    setPendingPdfState(null);
+    setPendingPdfState({
+  mode: stateToGenerate?.mode,
+  data: stateToGenerate?.data,
+  reversedData: reversedStateToGenerate || null,
+});
     setWarningCanContinue(false);
     setWarningOpen(true);
     setIsGenerating(false);
@@ -322,7 +734,11 @@ if (directionChange && directionStation.trim() !== "") {
     setWarningItems([
       "Richtungswechsel nicht zulässig: erster Wagen hat keine wirkende Druckluftbremse. Somit hätte das letzte Fahrzeug nach dem Richtungswechsel keine wirkende Druckluftbremse!"
     ]);
-    setPendingPdfState(null);
+    setPendingPdfState({
+  mode: stateToGenerate?.mode,
+  data: stateToGenerate?.data,
+  reversedData: reversedStateToGenerate || null,
+});
     setWarningCanContinue(false);
     setWarningOpen(true);
     setIsGenerating(false);
@@ -352,51 +768,66 @@ if (wagonTooSlow) {
 
 if (warnings.length > 0) {
   setWarningItems(warnings);
-  setPendingPdfState(state);
+  setPendingPdfState({
+    mode: stateToGenerate?.mode,
+    data: stateToGenerate?.data,
+    reversedData: reversedStateToGenerate || null,
+  });
   setWarningCanContinue(true);
   setWarningOpen(true);
   setIsGenerating(false);
   return;
 }
 
-  if (directionChange && directionStation.trim() !== "") {
-    const reversedState = {
-      ...state,
-      departureStation: directionStation,
-      lastVehicleNumber: state.firstVehicleNumber,
-    };
 
-    await createPdf(state, reversedState);
-    setIsGenerating(false);
-  } else {
-    await createPdf(state);
-    setIsGenerating(false);
-  }
+if (stateToGenerate?.mode === "international") {
+  await createPdf(undefined, undefined, stateToGenerate.data);
+  setIsGenerating(false);
+  return;
 }
+
+if (stateToGenerate?.mode === "national") {
+  await createPdf(
+    stateToGenerate.data,
+    reversedStateToGenerate || undefined
+  );
+  setIsGenerating(false);
+  return;
+}
+  }
 
 async function confirmWarningAndGeneratePdf() {
   setWarningOpen(false);
 
   if (!pendingPdfState) return;
 
-  if (
-  pendingPdfState.directionChange &&
-  pendingPdfState.directionChangeStation.trim() !== ""
-) {
-  const reversedState = {
-    ...pendingPdfState,
-    departureStation: pendingPdfState.directionChangeStation,
-    lastVehicleNumber: pendingPdfState.firstVehicleNumber,
-  };
-
-    await createPdf(pendingPdfState, reversedState);
-  } else {
-    await createPdf(pendingPdfState);
+  if (pendingPdfState.mode === "international") {
+    await createPdf(undefined, undefined, pendingPdfState.data);
+  } else if (pendingPdfState.mode === "national") {
+    await createPdf(
+      pendingPdfState.data,
+      pendingPdfState.reversedData || undefined
+    );
   }
 
   setPendingPdfState(null);
   setWarningItems([]);
 }
+
+const availableCountries = [
+  { code: "80", label: "Deutschland" },
+  { code: "81", label: "Österreich" },
+  { code: "83", label: "Italien" },
+  { code: "87", label: "Frankreich" },
+  { code: "88", label: "Belgien" },
+  { code: "86", label: "Dänemark" },
+  { code: "85", label: "Schweiz" },
+  { code: "84", label: "Niederlande" },
+  { code: "82", label: "Luxemburg" },
+  { code: "51", label: "Polen" },
+  { code: "54", label: "Tschechien" },
+];
+
   return (
     <div className="app">
       <div className="header-card">
@@ -404,7 +835,7 @@ async function confirmWarningAndGeneratePdf() {
           <img src="/header-icon.png" className="header-icon" />
           <div className="header-text">
             <h1>BREZEL-Master</h1>
-            <p>by Jonas Gießmann | Version 3.0</p>
+            <p>by Jonas Gießmann | Version 4.0</p>
           </div>
         </div>
       </div>
@@ -459,6 +890,38 @@ async function confirmWarningAndGeneratePdf() {
       </div>
 
       <div className="card">
+  <div className="card-title">
+    <span className="icon">🧾</span>
+    Bremszettelausdruck
+  </div>
+
+  <div className="lok-row">
+    <button
+      type="button"
+      className={`lok-box ${printMode === "national" ? "active" : ""}`}
+      onClick={() => {
+        setPrintMode("national");
+      }}
+    >
+      National
+      <span>Für Fahrten in Deutschland</span>
+    </button>
+
+    <button
+      type="button"
+      className={`lok-box ${printMode === "international" ? "active" : ""}`}
+      onClick={() => {
+        setPrintMode("international");
+        setInternationalModalOpen(true);
+      }}
+    >
+      International
+      <span>Für Grenzüberschreitenden Verkehr</span>
+    </button>
+  </div>
+</div>
+
+      <div className="card">
         <div className="card-title">
           <span className="icon">🚆</span>
           Lok wählen
@@ -492,73 +955,109 @@ async function confirmWarningAndGeneratePdf() {
       </div>
 
       <div className="card">
-        <div className="row">
-          <div>
-            <strong>Zuganfangsbahnhof</strong>
-            <div className="sub">Steht der Zug am Anfangsbahnhof?</div>
-          </div>
+  <div className="row">
+    <div>
+      <strong>Zuganfangsbahnhof</strong>
+      <div className="sub">Steht der Zug am Anfangsbahnhof?</div>
+    </div>
 
-          <div className="switch">
-            <div
-              className={`toggle ${zugStart ? "active" : ""}`}
-              onClick={() => setZugStart(!zugStart)}
-            />
-          </div>
-        </div>
+    <div className="switch">
+      <div
+        className={`toggle ${zugStart ? "active" : ""}`}
+        onClick={() => setZugStart(!zugStart)}
+      />
+    </div>
+  </div>
 
-        <div className="divider" />
+  <div className="divider" />
 
-        <div className="row">
-          <div>
-            <strong>Richtungswechsel</strong>
-            <div className="sub">Ist ein Richtungswechsel vorhanden?</div>
-          </div>
+  <div className="row">
+    <div>
+      <strong>Doppeltraktion</strong>
+      <div className="sub">Fährt der Zug mit zwei arbeitenden Loks?</div>
+    </div>
 
-          <div className="switch switch-with-text">
-  {directionChange && directionStation.trim() !== "" && (
-    <span className="switch-value">{directionStation}</span>
-  )}
+    <div className="switch">
+      <div
+  className={`toggle ${doubleTraction ? "active" : ""}`}
+  onClick={() => {
+    const newValue = !doubleTraction;
 
-  <div
-    className={`toggle ${directionChange ? "active" : ""}`}
-    onClick={() => {
-      const newValue = !directionChange;
-      setDirectionChange(newValue);
+    setDoubleTraction(newValue);
 
-      if (newValue) {
-        setDirectionModalOpen(true);
-      } else {
-        setDirectionStation("");
-      }
-    }}
-  />
+    if (newValue && !directionChange) {
+      setDoubleTractionModalOpen(true);
+    }
+
+    if (!newValue) {
+      setDoubleTractionSecondVehicleNumber("");
+      setDoubleTractionSecondSoleType("");
+    }
+  }}
+/>
+    </div>
+  </div>
+
+  <div className="divider" />
+
+  <div className="row">
+    <div>
+      <strong>Richtungswechsel</strong>
+      <div className="sub">Ist ein Richtungswechsel vorhanden?</div>
+    </div>
+
+    <div className="switch switch-with-text">
+      {directionChange && directionStation.trim() !== "" && (
+        <span className="switch-value">{directionStation}</span>
+      )}
+
+      <div
+        className={`toggle ${directionChange ? "active" : ""}`}
+        onClick={() => {
+          const newValue = !directionChange;
+          setDirectionChange(newValue);
+
+          if (newValue) {
+            setDirectionModalOpen(true);
+          } else {
+  setDirectionStation("");
+  setReduceToOneLocoAfterDirectionChange(false);
+  setRemovedLocoAfterDirectionChange("");
+  setSecondLocoEnabled(null);
+  setSecondLocoVehicleNumber("");
+  setSecondLocoSoleType("");
+  setSecondLocoInsertPosition("");
+  setSecondLocoInsertPositionError(false);
+}
+        }}
+      />
+    </div>
+  </div>
+
+  <div className="divider" />
+
+  <div className="row">
+    <div>
+      <strong>Bremsstellung</strong>
+      <div className="sub">Bremsstellung gemäß Fahrplan</div>
+    </div>
+
+    <div className="toggle-group">
+      <button
+        className={mode === "P" ? "active" : ""}
+        onClick={() => setMode("P")}
+      >
+        P
+      </button>
+      <button
+        className={mode === "G" ? "active" : ""}
+        onClick={() => setMode("G")}
+      >
+        G
+      </button>
+    </div>
+  </div>
 </div>
-        </div>
-
-        <div className="divider" />
-
-        <div className="row">
-          <div>
-            <strong>Bremsstellung</strong>
-            <div className="sub">Bremsstellung gemäß Fahrplan</div>
-          </div>
-
-          <div className="toggle-group">
-            <button
-              className={mode === "P" ? "active" : ""}
-              onClick={() => setMode("P")}
-            >
-              P
-            </button>
-            <button
-              className={mode === "G" ? "active" : ""}
-              onClick={() => setMode("G")}
-            >
-              G
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div className="card">
         <div className="card-title">
@@ -681,6 +1180,126 @@ async function confirmWarningAndGeneratePdf() {
     </div>
   </div>
 )}
+
+{secondLokSelectOpen && (
+  <div className="modal-overlay" style={{ zIndex: 1100 }}>
+    <div className="modal-card">
+      <h2>Zweite Lok auswählen</h2>
+
+      <div className="lok-list">
+        {locomotives.map((lok) => (
+          <button
+            key={lok.name}
+            type="button"
+            onClick={() => setSecondSelectedLokName(lok.name)}
+            className={
+              secondSelectedLokName === lok.name
+                ? "lok-list-button active"
+                : "lok-list-button"
+            }
+          >
+            {lok.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="primary"
+          onClick={() => setSecondLokSelectOpen(false)}
+        >
+          Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{secondCustomLokOpen && (
+  <div className="modal-overlay" style={{ zIndex: 1100 }}>
+    <div className="modal-card">
+      <h2>Zweite eigene Lok</h2>
+
+      <div className="lok-list">
+        <input
+          type="text"
+          placeholder="Lokbezeichnung"
+          value={secondCustomLokName}
+          onChange={(e) => setSecondCustomLokName(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Gewicht [t]"
+          value={secondCustomLokWeight}
+          onChange={(e) => setSecondCustomLokWeight(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Bremsgewicht P [t]"
+          value={secondCustomLokBrakeP}
+          onChange={(e) => setSecondCustomLokBrakeP(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Bremsgewicht G [t]"
+          value={secondCustomLokBrakeG}
+          onChange={(e) => setSecondCustomLokBrakeG(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Länge [m]"
+          value={secondCustomLokLength}
+          onChange={(e) => setSecondCustomLokLength(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Achsenzahl"
+          value={secondCustomLokAxles}
+          onChange={(e) => setSecondCustomLokAxles(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Zul. Höchstgeschwindigkeit [km/h]"
+          value={secondCustomLokVmax}
+          onChange={(e) => setSecondCustomLokVmax(e.target.value)}
+        />
+
+        <input
+  type="number"
+  placeholder="Festhaltekraft [kN]"
+  value={secondCustomLokFestKn}
+  onChange={(e) => setSecondCustomLokFestKn(e.target.value)}
+/>
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setSecondCustomLokOpen(false)}
+        >
+          Zurück
+        </button>
+
+        <button
+          type="button"
+          className="primary"
+          onClick={() => setSecondCustomLokOpen(false)}
+        >
+          Anwenden
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 {customLokOpen && (
   <div className="modal-overlay">
     <div className="modal-card">
@@ -742,6 +1361,13 @@ async function confirmWarningAndGeneratePdf() {
           onChange={(e) => setCustomLokVmax(e.target.value)}
           className={customErrors.vmax ? "input-error" : ""}
         />
+
+        <input
+  type="number"
+  placeholder="Festhaltekraft [kN]"
+  value={customLokFestKn}
+  onChange={(e) => setCustomLokFestKn(e.target.value)}
+/>
       </div>
 
       <div className="modal-actions">
@@ -801,16 +1427,188 @@ async function confirmWarningAndGeneratePdf() {
         />
       </div>
 
+      {doubleTraction && (
+  <>
+    <label>Nach Richtungswechsel nur noch eine Lok?</label>
+
+    <div style={{ display: "flex", gap: "10px", marginTop: "10px", marginBottom: "10px" }}>
+      <button
+        type="button"
+        className={reduceToOneLocoAfterDirectionChange === true ? "active" : ""}
+        onClick={() => setReduceToOneLocoAfterDirectionChange(true)}
+      >
+        Ja
+      </button>
+
+      <button
+        type="button"
+        className={reduceToOneLocoAfterDirectionChange === false ? "active" : ""}
+        onClick={() => {
+          setReduceToOneLocoAfterDirectionChange(false);
+          setRemovedLocoAfterDirectionChange("");
+        }}
+      >
+        Nein
+      </button>
+    </div>
+  </>
+)}
+
+{doubleTraction && reduceToOneLocoAfterDirectionChange && (
+  <>
+    <label>Welche Lok geht beim Richtungswechsel weg?</label>
+
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px", marginBottom: "10px" }}>
+      <button
+  type="button"
+  className={removedLocoAfterDirectionChange === "loco1" ? "active" : ""}
+  onClick={() => setRemovedLocoAfterDirectionChange("loco1")}
+>
+  {locoVehicleNumber.trim() !== "" ? locoVehicleNumber : "Lok 1"}
+</button>
+
+<button
+  type="button"
+  className={removedLocoAfterDirectionChange === "loco2" ? "active" : ""}
+  onClick={() => setRemovedLocoAfterDirectionChange("loco2")}
+>
+  {doubleTractionSecondVehicleNumber.trim() !== ""
+    ? doubleTractionSecondVehicleNumber
+    : "Lok 2"}
+</button>
+    </div>
+  </>
+)}
+
+{printMode === "international" && !doubleTraction && (
+  <>
+    <label>Weitere Lok?</label>
+
+    <div style={{ display: "flex", gap: "10px", marginTop: "10px", marginBottom: "10px" }}>
+      <button
+        type="button"
+        className={secondLocoEnabled === true ? "active" : ""}
+        onClick={() => setSecondLocoEnabled(true)}
+      >
+        Ja
+      </button>
+
+      <button
+        type="button"
+        className={secondLocoEnabled === false ? "active" : ""}
+        onClick={() => {
+  setSecondLocoEnabled(false);
+  setSecondSelectedLok("list");
+  setSecondSelectedLokName("G1206");
+  setSecondCustomLokName("");
+  setSecondCustomLokWeight("");
+  setSecondCustomLokBrakeP("");
+  setSecondCustomLokBrakeG("");
+  setSecondCustomLokLength("");
+  setSecondCustomLokVmax("");
+  setSecondCustomLokAxles("");
+  setSecondLocoVehicleNumber("");
+  setSecondLocoSoleType("");
+  setSecondLocoInsertPosition("");
+  setSecondLocoInsertPositionError(false);
+}}
+      >
+        Nein
+      </button>
+    </div>
+
+    {secondLocoEnabled && (
+      <div className="lok-row" style={{ marginTop: "12px" }}>
+        <button
+          type="button"
+          className={`lok-box ${secondSelectedLok === "list" ? "active" : ""}`}
+          onClick={() => {
+            setSecondSelectedLok("list");
+            setSecondLokSelectOpen(true);
+          }}
+        >
+          Lok aus Liste
+          <span>Aktuell: {secondSelectedLokName}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`lok-box ${secondSelectedLok === "custom" ? "active" : ""}`}
+          onClick={() => {
+            setSecondSelectedLok("custom");
+            setSecondCustomLokOpen(true);
+          }}
+        >
+          Eigene Lok
+          <span>{secondCustomLokName || "Manuell eingeben"}</span>
+        </button>
+      </div>
+    )}
+
+    {secondLocoEnabled && (
+  <>
+    <input
+      type="text"
+      placeholder="Lokfahrzeugnummer zweite Lok"
+      value={secondLocoVehicleNumber}
+      onChange={(e) => setSecondLocoVehicleNumber(e.target.value)}
+      style={{ marginTop: "12px" }}
+    />
+
+    <select
+      value={secondLocoSoleType}
+      onChange={(e) =>
+        setSecondLocoSoleType(
+          e.target.value as "F" | "D" | "L" | "LL" | "K" | ""
+        )
+      }
+      style={{ marginTop: "12px" }}
+    >
+      <option value="">Bremssohlenart zweite Lok</option>
+      <option value="F">F</option>
+      <option value="D">D</option>
+      <option value="L">L</option>
+      <option value="LL">LL</option>
+      <option value="K">K</option>
+    </select>
+
+    <select
+      value={secondLocoInsertPosition}
+      onChange={(e) => {
+        setSecondLocoInsertPosition(e.target.value as "1" | "2" | "");
+        setSecondLocoInsertPositionError(false);
+      }}
+      className={secondLocoInsertPositionError ? "input-error" : ""}
+      style={{ marginTop: "12px" }}
+    >
+      <option value="">Position der zweiten Lok nach Richtungswechsel</option>
+      <option value="1">Pos. 1</option>
+      <option value="2">Pos. 2</option>
+    </select>
+  </>
+)}
+  </>
+)}
+
+
+
       <div className="modal-actions">
   <button
     type="button"
     className="secondary"
     onClick={() => {
-      setDirectionChange(false);
-      setDirectionModalOpen(false);
-      setDirectionStation("");
-      setDirectionError(false);
-    }}
+  setDirectionChange(false);
+  setDirectionModalOpen(false);
+  setDirectionStation("");
+  setDirectionError(false);
+  setReduceToOneLocoAfterDirectionChange(false);
+  setRemovedLocoAfterDirectionChange("");
+  setSecondLocoEnabled(null);
+  setSecondLocoVehicleNumber("");
+  setSecondLocoSoleType("");
+  setSecondLocoInsertPosition("");
+  setSecondLocoInsertPositionError(false);
+}}
   >
     Zurück
   </button>
@@ -819,17 +1617,108 @@ async function confirmWarningAndGeneratePdf() {
     type="button"
     className="primary"
     onClick={() => {
-      if (directionStation.trim() === "") {
-  setDirectionError(true);
-  return;
-}
+  if (directionStation.trim() === "") {
+    setDirectionError(true);
+    return;
+  }
 
-      setDirectionModalOpen(false);
-    }}
+  if (
+    doubleTraction &&
+    reduceToOneLocoAfterDirectionChange &&
+    removedLocoAfterDirectionChange === ""
+  ) {
+    return;
+  }
+
+  if (
+    printMode === "international" &&
+    !doubleTraction &&
+    secondLocoEnabled &&
+    secondLocoInsertPosition === ""
+  ) {
+    setSecondLocoInsertPositionError(true);
+    return;
+  }
+
+  setDirectionModalOpen(false);
+}}
   >
     Anwenden
   </button>
 </div>
+    </div>
+  </div>
+)}
+
+{doubleTractionModalOpen && (
+  <div className="modal-overlay" style={{ zIndex: 1100 }}>
+    <div className="modal-card">
+      <h2>Zweite Lok bei Doppeltraktion</h2>
+
+      <div className="lok-list">
+        <input
+          type="text"
+          placeholder="Lokfahrzeugnummer zweite Lok"
+          value={doubleTractionSecondVehicleNumber}
+          onChange={(e) => {
+            setDoubleTractionSecondVehicleNumber(e.target.value);
+            setDoubleTractionModalError(false);
+          }}
+          className={doubleTractionModalError ? "input-error" : ""}
+        />
+
+        <select
+          value={doubleTractionSecondSoleType}
+          onChange={(e) => {
+            setDoubleTractionSecondSoleType(
+              e.target.value as "F" | "D" | "L" | "LL" | "K" | ""
+            );
+            setDoubleTractionModalError(false);
+          }}
+          className={doubleTractionModalError ? "input-error" : ""}
+        >
+          <option value="">Bremssohlenart zweite Lok</option>
+          <option value="F">F</option>
+          <option value="D">D</option>
+          <option value="L">L</option>
+          <option value="LL">LL</option>
+          <option value="K">K</option>
+        </select>
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            setDoubleTraction(false);
+            setDoubleTractionModalOpen(false);
+            setDoubleTractionSecondVehicleNumber("");
+            setDoubleTractionSecondSoleType("");
+            setDoubleTractionModalError(false);
+          }}
+        >
+          Zurück
+        </button>
+
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            if (
+              doubleTractionSecondVehicleNumber.trim() === "" ||
+              doubleTractionSecondSoleType === ""
+            ) {
+              setDoubleTractionModalError(true);
+              return;
+            }
+
+            setDoubleTractionModalOpen(false);
+          }}
+        >
+          Anwenden
+        </button>
+      </div>
     </div>
   </div>
 )}
@@ -885,6 +1774,265 @@ async function confirmWarningAndGeneratePdf() {
     </button>
   )}
 </div>
+    </div>
+  </div>
+)}
+
+{internationalModalOpen && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      <h2>Internationaler Bremszettel</h2>
+
+      <div className="lok-list">
+        <input
+  type="text"
+  placeholder="Aussteller-EVU"
+  value={issuerEvu}
+  onChange={(e) => setIssuerEvu(e.target.value)}
+/>
+    
+
+          <label>Laufweg (max. 3 Länder)</label>
+
+<div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
+  {availableCountries.map((country) => {
+    const isSelected = selectedCountries.some(c => c.code === country.code);
+
+    return (
+      <button
+        key={country.code}
+        type="button"
+        style={{
+          padding: "8px 12px",
+          borderRadius: "10px",
+          border: isSelected ? "2px solid #2d6cdf" : "1px solid #ccc",
+          background: isSelected ? "#e8f0ff" : "#fff",
+          cursor: "pointer",
+        }}
+        onClick={() => {
+          if (isSelected) {
+            setSelectedCountries(prev => prev.filter(c => c.code !== country.code));
+          } else {
+            if (selectedCountries.length >= 3) return;
+
+            setSelectedCountries(prev => [
+              ...prev,
+              {
+                code: country.code,
+                label: country.label,
+                trainCategory: "",
+                vmax: "",
+              },
+            ]);
+          }
+        }}
+      >
+        {country.label} ({country.code})
+      </button>
+    );
+  })}
+</div>
+
+{selectedCountries.map((country, index) => (
+  <div key={country.code} style={{ marginBottom: "12px" }}>
+    <strong>{country.label}</strong>
+
+    <input
+      type="text"
+      placeholder="Zugkategorie"
+      value={country.trainCategory}
+      onChange={(e) => {
+        const updated = [...selectedCountries];
+        updated[index].trainCategory = e.target.value;
+        setSelectedCountries(updated);
+      }}
+    />
+
+    <input
+      type="number"
+      placeholder="Vmax (km/h)"
+      value={country.vmax}
+      onChange={(e) => {
+        const updated = [...selectedCountries];
+        updated[index].vmax = e.target.value;
+        setSelectedCountries(updated);
+        updateTimetableSpeedFromCountries(updated);
+      }}
+    />
+  </div>
+))}
+
+<label>ETCS?</label>
+
+<div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+  <button
+    type="button"
+    className={etcsEnabled === true ? "active" : ""}
+    onClick={() => setEtcsEnabled(true)}
+  >
+    Ja
+  </button>
+
+  <button
+    type="button"
+    className={etcsEnabled === false ? "active" : ""}
+    onClick={() => {
+      setEtcsEnabled(false);
+      setEtcsLevel("");
+    }}
+  >
+    Nein
+  </button>
+</div>
+
+{etcsEnabled && (
+  <select
+    value={etcsLevel}
+    onChange={(e) =>
+      setEtcsLevel(e.target.value as "L0" | "L1" | "L2" | "L3" | "")
+    }
+  >
+    <option value="">Level wählen</option>
+    <option value="L0">L0</option>
+    <option value="L1">L1</option>
+    <option value="L2">L2</option>
+    <option value="L3">L3</option>
+  </select>
+)}
+
+<label>Abfalltransport im Zug?</label>
+
+<div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+  <button
+    type="button"
+    className={wasteTransportPresent === true ? "active" : ""}
+    onClick={() => setWasteTransportPresent(true)}
+  >
+    Ja
+  </button>
+
+  <button
+    type="button"
+    className={wasteTransportPresent === false ? "active" : ""}
+    onClick={() => setWasteTransportPresent(false)}
+  >
+    Nein
+  </button>
+</div>
+
+<label>Außergewöhnliche Sendung?</label>
+
+<div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+  <button
+    type="button"
+    className={exceptionalConsignment === true ? "active" : ""}
+    onClick={() => setExceptionalConsignment(true)}
+  >
+    Ja
+  </button>
+
+  <button
+    type="button"
+    className={exceptionalConsignment === false ? "active" : ""}
+    onClick={() => {
+      setExceptionalConsignment(false);
+      setBzaNumber("");
+    }}
+  >
+    Nein
+  </button>
+</div>
+
+{exceptionalConsignment && (
+  <input
+    type="text"
+    placeholder="BZA-Nr."
+    value={bzaNumber}
+    onChange={(e) => setBzaNumber(e.target.value)}
+  />
+)}
+
+<label>Zusätzliche Dokumente über weitere Einschr. anbei?</label>
+
+<div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+  <button
+    type="button"
+    className={additionalRestrictionDocs === true ? "active" : ""}
+    onClick={() => setAdditionalRestrictionDocs(true)}
+  >
+    Ja
+  </button>
+
+  <button
+    type="button"
+    className={additionalRestrictionDocs === false ? "active" : ""}
+    onClick={() => setAdditionalRestrictionDocs(false)}
+  >
+    Nein
+  </button>
+</div>
+
+<label>Bemerkungen während der Fahrt</label>
+<textarea
+  placeholder="z.B. Personalwechsel, Besonderheiten unterwegs"
+  value={remarksDuringTrip}
+  onChange={(e) => setRemarksDuringTrip(e.target.value)}
+/>
+
+<label>Besonderheiten des Zuges</label>
+<textarea
+  placeholder="z.B. Wagen mit Reisenden besetzt"
+  value={trainSpecialties}
+  onChange={(e) => setTrainSpecialties(e.target.value)}
+/>
+
+        <input
+          type="text"
+          placeholder="Lokfahrzeugnummer"
+          value={locoVehicleNumber}
+          onChange={(e) => setLocoVehicleNumber(e.target.value)}
+        />
+
+        <label>Bremssohlenart der Lok</label>
+        <select
+          value={locoSoleType}
+          onChange={(e) =>
+            setLocoSoleType(
+              e.target.value as "F" | "D" | "L" | "LL" | "K" | ""
+            )
+          }
+        >
+          <option value="">Bitte wählen</option>
+          <option value="F">F</option>
+          <option value="D">D</option>
+          <option value="L">L</option>
+          <option value="LL">LL</option>
+          <option value="K">K</option>
+        </select>
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            setPrintMode("national");
+            setInternationalModalOpen(false);
+          }}
+        >
+          Zurück
+        </button>
+
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            setInternationalModalOpen(false);
+          }}
+        >
+          Anwenden
+        </button>
+      </div>
     </div>
   </div>
 )}
