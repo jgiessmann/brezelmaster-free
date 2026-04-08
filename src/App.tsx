@@ -41,6 +41,32 @@ function App() {
   setTimetableSpeedInput(String(maxVmax));
 }
 
+const [addLocoAtStation, setAddLocoAtStation] = useState(false);
+const [addLocoModalOpen, setAddLocoModalOpen] = useState(false);
+
+const [addLocoStation, setAddLocoStation] = useState("");
+
+const [addedLocoSelectedType, setAddedLocoSelectedType] = useState<"list" | "custom">("list");
+const [addedLocoSelectedName, setAddedLocoSelectedName] = useState("G1206");
+const [addedLocoSelectOpen, setAddedLocoSelectOpen] = useState(false);
+const [addedCustomLocoOpen, setAddedCustomLocoOpen] = useState(false);
+
+const [addedLocoVehicleNumber, setAddedLocoVehicleNumber] = useState("");
+const [addedLocoInsertPosition, setAddedLocoInsertPosition] = useState<"1" | "2" | "">("");
+const [addedLocoSoleType, setAddedLocoSoleType] = useState<
+  "F" | "D" | "L" | "LL" | "K" | ""
+>("");
+
+const [addedCustomLocoName, setAddedCustomLocoName] = useState("");
+const [addedCustomLocoWeight, setAddedCustomLocoWeight] = useState("");
+const [addedCustomLocoBrakeP, setAddedCustomLocoBrakeP] = useState("");
+const [addedCustomLocoBrakeG, setAddedCustomLocoBrakeG] = useState("");
+const [addedCustomLocoLength, setAddedCustomLocoLength] = useState("");
+const [addedCustomLocoVmax, setAddedCustomLocoVmax] = useState("");
+const [addedCustomLocoAxles, setAddedCustomLocoAxles] = useState("");
+const [addedCustomLocoFestKn, setAddedCustomLocoFestKn] = useState("");
+
+const [addLocoModalError, setAddLocoModalError] = useState(false);
   const [zugStart, setZugStart] = useState(true);
   const [doubleTraction, setDoubleTraction] = useState(false);
   const [directionChange, setDirectionChange] = useState(false);
@@ -156,6 +182,7 @@ const [removedLocoAfterDirectionChange, setRemovedLocoAfterDirectionChange] = us
 
 
 const [directionStation, setDirectionStation] = useState("");
+const [keepDoubleTractionAfterDirectionChange, setKeepDoubleTractionAfterDirectionChange] = useState<boolean | null>(null);
 const [parsedSummary, setParsedSummary] = useState<ParsedSummary | null>(null);
 
 const [minimumBrakePercentageInput, setMinimumBrakePercentageInput] = useState("");
@@ -319,6 +346,25 @@ const secondActiveLok =
     ? { ...activeLok }
     : secondActiveLok;
 
+    const addedSelectedListLok =
+  locomotives.find((lok) => lok.name === addedLocoSelectedName) || locomotives[0];
+
+const addedActiveLok =
+  !addLocoAtStation
+    ? null
+    : addedLocoSelectedType === "custom"
+    ? {
+        name: addedCustomLocoName || "Zusätzliche Lok",
+        weightTons: Number(addedCustomLocoWeight) || 0,
+        brakeWeightP: Number(addedCustomLocoBrakeP) || 0,
+        brakeWeightG: Number(addedCustomLocoBrakeG) || 0,
+        lengthMeters: Number(addedCustomLocoLength) || 0,
+        vmax: Number(addedCustomLocoVmax) || 0,
+        axles: Number(addedCustomLocoAxles) || 0,
+        festKn: Number(addedCustomLocoFestKn) || 0,
+      }
+    : addedSelectedListLok;
+
   async function handleGeneratePdf() {
     setIsGenerating(true);
 
@@ -360,6 +406,19 @@ const secondLocoBrakeWeight =
         mode
       )
     : 0;
+
+    const addedLocoBrakeWeight =
+  addedActiveLok
+    ? determineLocoBrakeWeight(
+        addedActiveLok,
+        parsedSummary.totalWeightTons,
+        parsedSummary.totalLengthMeters,
+        mode
+      )
+    : 0;
+
+const addedLocoFestKn =
+  addedActiveLok ? addedActiveLok.festKn || 0 : 0;
 
 
 
@@ -483,6 +542,46 @@ const ntcDisplay = etcsEnabled === false || etcsEnabled === true ? "NTC" : "";
 const locoFestKn = activeLok.festKn || 0;
 const secondLocoFestKn = tractionSecondLok ? tractionSecondLok.festKn || 0 : 0;
 
+const addLocoTotalVehicleCount =
+  parsedSummary.wagonCount + 1 + (addedActiveLok ? 1 : 0);
+
+const addLocoTotalLength =
+  Math.ceil(
+    parsedSummary.totalLengthMeters +
+      activeLok.lengthMeters +
+      (addedActiveLok ? addedActiveLok.lengthMeters : 0)
+  );
+
+const addLocoTotalWeight =
+  parsedSummary.totalWeightTons +
+  activeLok.weightTons +
+  (addedActiveLok ? addedActiveLok.weightTons : 0);
+
+const addLocoTotalBrakeWeight =
+  parsedSummary.totalBrakeWeightTons +
+  locoBrakeWeight +
+  (addedActiveLok ? addedLocoBrakeWeight : 0);
+
+const addLocoTotalAxles =
+  parsedSummary.totalAxles +
+  activeLok.axles +
+  (addedActiveLok ? addedActiveLok.axles : 0);
+
+const addLocoTotalFestKn =
+  parsedSummary.totalFestKn +
+  locoFestKn +
+  (addedActiveLok ? addedLocoFestKn : 0);
+
+    const addLocoAvailableBrakePercentage =
+  addLocoTotalWeight > 0
+    ? Math.floor((addLocoTotalBrakeWeight * 100) / addLocoTotalWeight)
+    : 0;
+
+    const addLocoMissingBrakePercentage =
+  addLocoAvailableBrakePercentage < minimum
+    ? minimum - addLocoAvailableBrakePercentage
+    : 0;
+
 const workingLocoWeightTons =
   activeLok.weightTons +
   (doubleTraction && tractionSecondLok ? tractionSecondLok.weightTons : 0);
@@ -535,6 +634,10 @@ if (printMode === "international") {
     bzaNumber,
     remarksDuringTrip,
     vmaxRemark,
+    addLocoBeforeStationRemark:
+  addLocoAtStation && addLocoStation.trim() !== ""
+    ? `Bis ${addLocoStation} mit nur einem Tfz an Spitze`
+    : "",
     wagonAxlesRemark: `Anzahl Radsätze Wagenzug: ${parsedSummary.totalAxles}`,
     trainSpecialties,
     additionalRestrictionDocs,
@@ -561,6 +664,23 @@ if (printMode === "international") {
     secondLocoMode: mode,
     secondLocoBrakeWeightTons: tractionSecondLok ? String(secondLocoBrakeWeight) : "",
     secondLocoInsertPosition,
+    addLocoAtStation,
+addLocoStation,
+addedLocoVehicleNumber,
+addedLocoSoleType,
+addedLocoInsertPosition,
+addedLocoName: addedActiveLok ? addedActiveLok.name : "",
+addedLocoAxles: addedActiveLok ? String(addedActiveLok.axles) : "",
+addedLocoLengthMeters: addedActiveLok ? String(addedActiveLok.lengthMeters) : "",
+addedLocoWeightTons: addedActiveLok ? String(addedActiveLok.weightTons) : "",
+addedLocoBrakeWeightTons: addedActiveLok ? String(addedLocoBrakeWeight) : "",
+addedLocoFestKn: addedActiveLok ? String(addedLocoFestKn) : "",
+addedLocoRemark:
+  addLocoAtStation && addLocoStation.trim() !== "" && addedLocoInsertPosition === "1"
+    ? `ab ${addLocoStation} Spitze`
+    : addLocoAtStation && addLocoStation.trim() !== "" && addedLocoInsertPosition === "2"
+    ? `ab ${addLocoStation}`
+    : "",
 
     reduceToOneLocoAfterDirectionChange,
 removedLocoAfterDirectionChange,
@@ -648,6 +768,17 @@ firstLocoFestKn: String(locoFestKn),
       directionChangeMissingBrakePercentage > 0
         ? String(directionChangeMissingBrakePercentage)
         : "",
+        addLocoTotalVehicleCount: String(addLocoTotalVehicleCount),
+addLocoTotalLengthMeters: String(addLocoTotalLength),
+addLocoTotalWeightTons: String(addLocoTotalWeight),
+addLocoTotalBrakeWeightTons: String(addLocoTotalBrakeWeight),
+addLocoTotalAxles: String(addLocoTotalAxles),
+addLocoTotalFestKn: String(addLocoTotalFestKn),
+addLocoAvailableBrakePercentage: String(addLocoAvailableBrakePercentage),
+addLocoMissingBrakePercentage:
+  addLocoMissingBrakePercentage > 0
+    ? String(addLocoMissingBrakePercentage)
+    : "",
 
     availableBrakePercentage: String(availableBrakePercentage),
     mode,
@@ -674,54 +805,130 @@ stateToGenerate = {
 
 
   const state = {
-    date: new Date().toLocaleDateString("de-DE"),
-    trainNumber: parsedSummary.trainNumber,
-    departureStation: parsedSummary.departureStation,
-    zugStart,
-    directionChange,
-    directionChangeStation: directionStation,
-    firstVehicleNumber: parsedSummary.firstVehicleNumber,
-    firstBrakeWeight: parsedSummary.firstBrakeWeight,
-    lokVmax: activeLok.vmax,
-    fahrplanVmax: Number(timetableSpeedInput) || 0,
+  date: new Date().toLocaleDateString("de-DE"),
+  trainNumber: parsedSummary.trainNumber,
+  departureStation: parsedSummary.departureStation,
+  zugStart,
+  directionChange,
+  directionChangeStation: directionStation,
+  firstVehicleNumber: parsedSummary.firstVehicleNumber,
+  firstBrakeWeight: parsedSummary.firstBrakeWeight,
+  lokVmax: activeLok.vmax,
+  fahrplanVmax: Number(timetableSpeedInput) || 0,
 
-    wagonWeightTons: String(parsedSummary.totalWeightTons),
-    locoWeightTons: String(activeLok.weightTons),
-    totalWeightTons: String(totalWeight),
+  wagonWeightTons: String(parsedSummary.totalWeightTons),
+  locoWeightTons: String(
+    activeLok.weightTons +
+      (doubleTraction && tractionSecondLok ? tractionSecondLok.weightTons : 0)
+  ),
+  totalWeightTons: String(totalWeight),
 
-    wagonBrakeWeightTons: String(parsedSummary.totalBrakeWeightTons),
-    locoBrakeWeightTons: String(locoBrakeWeight),
-    totalBrakeWeightTons: String(totalBrakeWeight),
+  wagonBrakeWeightTons: String(parsedSummary.totalBrakeWeightTons),
+  locoBrakeWeightTons: String(
+    locoBrakeWeight +
+      (doubleTraction && tractionSecondLok ? secondLocoBrakeWeight : 0)
+  ),
+  totalBrakeWeightTons: String(totalBrakeWeight),
 
-    wagonAxles: String(parsedSummary.totalAxles),
-    locoAxles: String(activeLok.axles),
-    totalAxles: String(totalAxles),
+  wagonAxles: String(parsedSummary.totalAxles),
+  locoAxles: String(
+    activeLok.axles +
+      (doubleTraction && tractionSecondLok ? tractionSecondLok.axles : 0)
+  ),
+  totalAxles: String(totalAxles),
 
-    minimumBrakePercentage: String(minimum),
-    availableBrakePercentage: String(availableBrakePercentage),
-    missingBrakePercentage: missingBrakePercentage > 0 ? String(missingBrakePercentage) : "",
+  minimumBrakePercentage: String(minimum),
+  availableBrakePercentage: String(availableBrakePercentage),
+  missingBrakePercentage: missingBrakePercentage > 0 ? String(missingBrakePercentage) : "",
 
-    lastVehicleNumber: parsedSummary.lastVehicleNumber,
-    multiReleaseBrakeCount: String(parsedSummary.multiReleaseBrakeCount),
-    kLllBrakeCount: String(parsedSummary.kLllBrakeCount),
+  lastVehicleNumber: parsedSummary.lastVehicleNumber,
+  multiReleaseBrakeCount: String(parsedSummary.multiReleaseBrakeCount),
+  kLllBrakeCount: String(parsedSummary.kLllBrakeCount),
 
-    wagonLengthMeters: String(Math.ceil(parsedSummary.totalLengthMeters)),
-    locoLengthMeters: String(activeLok.lengthMeters),
-    totalLengthMeters: String(totalLength),
+  wagonLengthMeters: String(Math.ceil(parsedSummary.totalLengthMeters)),
+  locoLengthMeters: String(
+    activeLok.lengthMeters +
+      (doubleTraction && tractionSecondLok ? tractionSecondLok.lengthMeters : 0)
+  ),
+  totalLengthMeters: String(totalLength),
 
-    speedCheckNo: wagonTooSlow,
-    lowerSpeedKmh: wagonTooSlow ? String(parsedSummary.lowerSpeedKmh ?? "") : "",
+  speedCheckNo: wagonTooSlow,
+  lowerSpeedKmh: wagonTooSlow ? String(parsedSummary.lowerSpeedKmh ?? "") : "",
 
-    dangerousGoodsPresent: parsedSummary.dangerousGoodsPresent,
-    issuedByName,
-  };
+  dangerousGoodsPresent: parsedSummary.dangerousGoodsPresent,
+  issuedByName,
+};
 
   if (printMode !== "international") {
   if (directionChange && directionStation.trim() !== "") {
+    const reversedLocoWeightTons =
+      doubleTraction && keepDoubleTractionAfterDirectionChange === false
+        ? activeLok.weightTons
+        : activeLok.weightTons +
+          (doubleTraction && tractionSecondLok ? tractionSecondLok.weightTons : 0);
+
+    const reversedLocoBrakeWeightTons =
+      doubleTraction && keepDoubleTractionAfterDirectionChange === false
+        ? locoBrakeWeight
+        : locoBrakeWeight +
+          (doubleTraction && tractionSecondLok ? secondLocoBrakeWeight : 0);
+
+    const reversedLocoAxles =
+      doubleTraction && keepDoubleTractionAfterDirectionChange === false
+        ? activeLok.axles
+        : activeLok.axles +
+          (doubleTraction && tractionSecondLok ? tractionSecondLok.axles : 0);
+
+    const reversedLocoLengthMeters =
+      doubleTraction && keepDoubleTractionAfterDirectionChange === false
+        ? activeLok.lengthMeters
+        : activeLok.lengthMeters +
+          (doubleTraction && tractionSecondLok ? tractionSecondLok.lengthMeters : 0);
+
+    const reversedTotalWeightTons =
+      parsedSummary.totalWeightTons + reversedLocoWeightTons;
+
+    const reversedTotalBrakeWeightTons =
+      parsedSummary.totalBrakeWeightTons + reversedLocoBrakeWeightTons;
+
+    const reversedTotalAxles =
+      parsedSummary.totalAxles + reversedLocoAxles;
+
+    const reversedTotalLengthMeters =
+      Math.ceil(parsedSummary.totalLengthMeters + reversedLocoLengthMeters);
+
+    const reversedAvailableBrakePercentage =
+      reversedTotalWeightTons > 0
+        ? Math.floor((reversedTotalBrakeWeightTons * 100) / reversedTotalWeightTons)
+        : 0;
+
+    const reversedMissingBrakePercentage =
+      reversedAvailableBrakePercentage < minimum
+        ? minimum - reversedAvailableBrakePercentage
+        : 0;
+
     reversedStateToGenerate = {
       ...state,
       departureStation: directionStation,
       lastVehicleNumber: state.firstVehicleNumber,
+
+      locoWeightTons: String(reversedLocoWeightTons),
+      totalWeightTons: String(reversedTotalWeightTons),
+
+      locoBrakeWeightTons: String(reversedLocoBrakeWeightTons),
+      totalBrakeWeightTons: String(reversedTotalBrakeWeightTons),
+
+      locoAxles: String(reversedLocoAxles),
+      totalAxles: String(reversedTotalAxles),
+
+      locoLengthMeters: String(reversedLocoLengthMeters),
+      totalLengthMeters: String(reversedTotalLengthMeters),
+
+      availableBrakePercentage: String(reversedAvailableBrakePercentage),
+      missingBrakePercentage:
+        reversedMissingBrakePercentage > 0
+          ? String(reversedMissingBrakePercentage)
+          : "",
     };
   }
 
@@ -847,6 +1054,8 @@ const availableCountries = [
   { code: "51", label: "Polen" },
   { code: "54", label: "Tschechien" },
 ];
+    const doubleTractionDisabled =
+  printMode === "international" && addLocoAtStation;
 
   return (
     <div className="app">
@@ -972,6 +1181,53 @@ const availableCountries = [
   <span>{customLokName || "Manuell eingeben"}</span>
 </button>
         </div>
+
+        {printMode === "international" && (
+  <>
+    <div className="divider" />
+
+    <div className="row">
+      <div>
+        <strong>Lok in Unterwegsbahnhof hinzufügen</strong>
+        <div className="sub">Soll unterwegs eine weitere arbeitende Lok dazukommen?</div>
+      </div>
+
+      <div className="switch">
+        <div
+          className={`toggle ${addLocoAtStation ? "active" : ""}`}
+          onClick={() => {
+            const newValue = !addLocoAtStation;
+            setAddLocoAtStation(newValue);
+            if (newValue) {
+  setDoubleTraction(false);
+}
+
+            if (newValue) {
+              setAddLocoModalOpen(true);
+            } else {
+              setAddLocoModalOpen(false);
+              setAddLocoStation("");
+              setAddedLocoSelectedType("list");
+              setAddedLocoSelectedName("G1206");
+              setAddedLocoVehicleNumber("");
+              setAddedLocoInsertPosition("");
+              setAddedLocoSoleType("");
+              setAddedCustomLocoName("");
+              setAddedCustomLocoWeight("");
+              setAddedCustomLocoBrakeP("");
+              setAddedCustomLocoBrakeG("");
+              setAddedCustomLocoLength("");
+              setAddedCustomLocoVmax("");
+              setAddedCustomLocoAxles("");
+              setAddedCustomLocoFestKn("");
+              setAddLocoModalError(false);
+            }
+          }}
+        />
+      </div>
+    </div>
+  </>
+)}
       </div>
 
       <div className="card">
@@ -998,9 +1254,14 @@ const availableCountries = [
     </div>
 
     <div className="switch">
-      <div
-  className={`toggle ${doubleTraction ? "active" : ""}`}
+
+<div
+  className={`toggle ${doubleTraction ? "active" : ""} ${
+    doubleTractionDisabled ? "disabled" : ""
+  }`}
   onClick={() => {
+    if (doubleTractionDisabled) return;
+
     const newValue = !doubleTraction;
 
     setDoubleTraction(newValue);
@@ -1048,6 +1309,7 @@ const availableCountries = [
   setSecondLocoSoleType("");
   setSecondLocoInsertPosition("");
   setSecondLocoInsertPositionError(false);
+  setKeepDoubleTractionAfterDirectionChange(null);
 }
         }}
       />
@@ -1447,7 +1709,31 @@ const availableCountries = [
         />
       </div>
 
-      {doubleTraction && (
+      {printMode === "national" && doubleTraction && (
+  <>
+    <label>Nach Richtungswechsel weiterhin Doppeltraktion?</label>
+
+    <div style={{ display: "flex", gap: "10px", marginTop: "10px", marginBottom: "10px" }}>
+      <button
+        type="button"
+        className={keepDoubleTractionAfterDirectionChange === true ? "active" : ""}
+        onClick={() => setKeepDoubleTractionAfterDirectionChange(true)}
+      >
+        Ja
+      </button>
+
+      <button
+        type="button"
+        className={keepDoubleTractionAfterDirectionChange === false ? "active" : ""}
+        onClick={() => setKeepDoubleTractionAfterDirectionChange(false)}
+      >
+        Nein
+      </button>
+    </div>
+  </>
+)}
+
+      {printMode === "international" && doubleTraction && (
   <>
     <label>Nach Richtungswechsel nur noch eine Lok?</label>
 
@@ -1646,6 +1932,13 @@ const availableCountries = [
     setDirectionError(true);
     return;
   }
+  if (
+  printMode === "national" &&
+  doubleTraction &&
+  keepDoubleTractionAfterDirectionChange === null
+) {
+  return;
+}
 
   if (
     doubleTraction &&
@@ -1745,6 +2038,268 @@ const availableCountries = [
 
             setDoubleTractionModalOpen(false);
           }}
+        >
+          Anwenden
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{addLocoModalOpen && (
+  <div className="modal-overlay" style={{ zIndex: 1100 }}>
+    <div className="modal-card">
+      <h2>Lok im Unterwegsbahnhof hinzufügen</h2>
+
+      <div className="lok-list">
+        <input
+          type="text"
+          placeholder="Unterwegsbahnhof"
+          value={addLocoStation}
+          onChange={(e) => {
+            setAddLocoStation(e.target.value);
+            setAddLocoModalError(false);
+          }}
+          className={addLocoModalError && addLocoStation.trim() === "" ? "input-error" : ""}
+        />
+
+        <div className="lok-row" style={{ marginTop: "12px" }}>
+          <button
+            type="button"
+            className={`lok-box ${addedLocoSelectedType === "list" ? "active" : ""}`}
+            onClick={() => {
+              setAddedLocoSelectedType("list");
+              setAddedLocoSelectOpen(true);
+            }}
+          >
+            Lok aus Liste
+            <span>Aktuell: {addedLocoSelectedName}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`lok-box ${addedLocoSelectedType === "custom" ? "active" : ""}`}
+            onClick={() => {
+              setAddedLocoSelectedType("custom");
+              setAddedCustomLocoOpen(true);
+            }}
+          >
+            Eigene Lok
+            <span>{addedCustomLocoName || "Manuell eingeben"}</span>
+          </button>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Lokfahrzeugnummer"
+          value={addedLocoVehicleNumber}
+          onChange={(e) => {
+            setAddedLocoVehicleNumber(formatVehicleNumberInput(e.target.value));
+            setAddLocoModalError(false);
+          }}
+          inputMode="numeric"
+          maxLength={16}
+          autoComplete="off"
+          style={{ marginTop: "12px" }}
+          className={addLocoModalError && addedLocoVehicleNumber.trim() === "" ? "input-error" : ""}
+        />
+
+        <select
+          value={addedLocoInsertPosition}
+          onChange={(e) => {
+            setAddedLocoInsertPosition(e.target.value as "1" | "2" | "");
+            setAddLocoModalError(false);
+          }}
+          style={{ marginTop: "12px" }}
+          className={addLocoModalError && addedLocoInsertPosition === "" ? "input-error" : ""}
+        >
+          <option value="">Position der zusätzlichen Lok ab Unterwegsbahnhof</option>
+          <option value="1">Pos. 1</option>
+          <option value="2">Pos. 2</option>
+        </select>
+      </div>
+
+      <select
+  value={addedLocoSoleType}
+  onChange={(e) => {
+    setAddedLocoSoleType(
+      e.target.value as "F" | "D" | "L" | "LL" | "K" | ""
+    );
+    setAddLocoModalError(false);
+  }}
+  style={{ marginTop: "12px" }}
+  className={addLocoModalError && addedLocoSoleType === "" ? "input-error" : ""}
+>
+  <option value="">Bremssohlenart zusätzliche Lok</option>
+  <option value="F">F</option>
+  <option value="D">D</option>
+  <option value="L">L</option>
+  <option value="LL">LL</option>
+  <option value="K">K</option>
+</select>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            setAddLocoAtStation(false);
+            setAddLocoModalOpen(false);
+            setAddLocoStation("");
+            setAddedLocoSelectedType("list");
+            setAddedLocoSelectedName("G1206");
+            setAddedLocoVehicleNumber("");
+            setAddedLocoInsertPosition("");
+            setAddedLocoSoleType("");
+            setAddedCustomLocoName("");
+            setAddedCustomLocoWeight("");
+            setAddedCustomLocoBrakeP("");
+            setAddedCustomLocoBrakeG("");
+            setAddedCustomLocoLength("");
+            setAddedCustomLocoVmax("");
+            setAddedCustomLocoAxles("");
+            setAddedCustomLocoFestKn("");
+            setAddLocoModalError(false);
+          }}
+        >
+          Zurück
+        </button>
+
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            if (
+  addLocoStation.trim() === "" ||
+  addedLocoVehicleNumber.trim() === "" ||
+  addedLocoSoleType === "" ||
+  addedLocoInsertPosition === ""
+) {
+  setAddLocoModalError(true);
+  return;
+}
+
+            setAddLocoModalOpen(false);
+          }}
+        >
+          Anwenden
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{addedLocoSelectOpen && (
+  <div className="modal-overlay" style={{ zIndex: 1200 }}>
+    <div className="modal-card">
+      <h2>Zusätzliche Lok auswählen</h2>
+
+      <div className="lok-list">
+        {locomotives.map((lok) => (
+          <button
+            key={lok.name}
+            type="button"
+            onClick={() => setAddedLocoSelectedName(lok.name)}
+            className={
+              addedLocoSelectedName === lok.name
+                ? "lok-list-button active"
+                : "lok-list-button"
+            }
+          >
+            {lok.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="primary"
+          onClick={() => setAddedLocoSelectOpen(false)}
+        >
+          Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{addedCustomLocoOpen && (
+  <div className="modal-overlay" style={{ zIndex: 1200 }}>
+    <div className="modal-card">
+      <h2>Zusätzliche eigene Lok</h2>
+
+      <div className="lok-list">
+        <input
+          type="text"
+          placeholder="Lokbezeichnung"
+          value={addedCustomLocoName}
+          onChange={(e) => setAddedCustomLocoName(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Gewicht [t]"
+          value={addedCustomLocoWeight}
+          onChange={(e) => setAddedCustomLocoWeight(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Bremsgewicht P [t]"
+          value={addedCustomLocoBrakeP}
+          onChange={(e) => setAddedCustomLocoBrakeP(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Bremsgewicht G [t]"
+          value={addedCustomLocoBrakeG}
+          onChange={(e) => setAddedCustomLocoBrakeG(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Länge [m]"
+          value={addedCustomLocoLength}
+          onChange={(e) => setAddedCustomLocoLength(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Achsenzahl"
+          value={addedCustomLocoAxles}
+          onChange={(e) => setAddedCustomLocoAxles(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Zul. Höchstgeschwindigkeit [km/h]"
+          value={addedCustomLocoVmax}
+          onChange={(e) => setAddedCustomLocoVmax(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Festhaltekraft [kN]"
+          value={addedCustomLocoFestKn}
+          onChange={(e) => setAddedCustomLocoFestKn(e.target.value)}
+        />
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setAddedCustomLocoOpen(false)}
+        >
+          Zurück
+        </button>
+
+        <button
+          type="button"
+          className="primary"
+          onClick={() => setAddedCustomLocoOpen(false)}
         >
           Anwenden
         </button>

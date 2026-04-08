@@ -701,3 +701,8 @@ input[type="number"] {
   padding: 10px 16px;
   cursor: pointer;
 }
+
+.toggle.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
