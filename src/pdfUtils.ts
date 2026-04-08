@@ -202,37 +202,59 @@ if (wrappedVmaxRemark) {
 }
 
     const baseText = internationalState.trainSpecialties || "";
-    let yStart = 1191 - 210;
+const axlesText = internationalState.wagonAxlesRemark || "";
 
-    if (baseText) {
-      const wrappedBase = wrapTextByChars(baseText, 42);
+let yStart = 1191 - 210;
+const specialtiesLineHeight = 16;
 
-      page.drawText(wrappedBase, {
-        x: 393,
-        y: yStart,
-        size: 14,
-        font,
-        color: rgb(8 / 255, 12 / 255, 218 / 255),
-        lineHeight: 16,
-      });
+// 🔵 Nutzertext (blau)
+if (baseText) {
+  const wrappedBase = wrapTextByChars(baseText, 42);
 
-      const lineCount = wrappedBase.split("\n").length;
-      yStart = yStart - lineCount * 16 - 16;
-    }
+  page.drawText(wrappedBase, {
+    x: 393,
+    y: yStart,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+    lineHeight: specialtiesLineHeight,
+  });
 
-    if (internationalState.exceptionalConsignment && internationalState.bzaNumber) {
-      const bzaText = `BZA-Nr.: ${internationalState.bzaNumber}`;
-      const wrappedBza = wrapTextByChars(bzaText, 42);
+  const lineCount = wrappedBase.split("\n").length;
+  yStart = yStart - lineCount * specialtiesLineHeight - specialtiesLineHeight;
+}
 
-      page.drawText(wrappedBza, {
-        x: 393,
-        y: yStart,
-        size: 14,
-        font,
-        color: rgb(220 / 255, 0, 0),
-        lineHeight: 16,
-      });
-    }
+// 🔵 Anzahl Radsätze Wagenzug
+if (axlesText) {
+  const wrappedAxles = wrapTextByChars(axlesText, 42);
+
+  page.drawText(wrappedAxles, {
+    x: 393,
+    y: yStart,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+    lineHeight: specialtiesLineHeight,
+  });
+
+  const axlesLineCount = wrappedAxles.split("\n").length;
+  yStart = yStart - axlesLineCount * specialtiesLineHeight - specialtiesLineHeight;
+}
+
+// 🔴 BZA (rot + Abstand)
+if (internationalState.exceptionalConsignment && internationalState.bzaNumber) {
+  const bzaText = `BZA-Nr.: ${internationalState.bzaNumber}`;
+  const wrappedBza = wrapTextByChars(bzaText, 42);
+
+  page.drawText(wrappedBza, {
+    x: 393,
+    y: yStart,
+    size: 14,
+    font,
+    color: rgb(220 / 255, 0, 0),
+    lineHeight: specialtiesLineHeight,
+  });
+}
 
     if (internationalState.dangerousGoodsPresent) {
       page.drawText("X", {

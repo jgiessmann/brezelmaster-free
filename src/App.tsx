@@ -8,6 +8,25 @@ type InternationalCountry = {
   vmax: string;
 };
 
+function formatVehicleNumberInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 12);
+
+  const part1 = digits.slice(0, 2);
+  const part2 = digits.slice(2, 4);
+  const part3 = digits.slice(4, 8);
+  const part4 = digits.slice(8, 11);
+  const part5 = digits.slice(11, 12);
+
+  let formatted = part1;
+
+  if (part2) formatted += ` ${part2}`;
+  if (part3) formatted += ` ${part3}`;
+  if (part4) formatted += ` ${part4}`;
+  if (part5) formatted += `-${part5}`;
+
+  return formatted;
+}
+
 function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -516,6 +535,7 @@ if (printMode === "international") {
     bzaNumber,
     remarksDuringTrip,
     vmaxRemark,
+    wagonAxlesRemark: `Anzahl Radsätze Wagenzug: ${parsedSummary.totalAxles}`,
     trainSpecialties,
     additionalRestrictionDocs,
 
@@ -1548,12 +1568,17 @@ const availableCountries = [
     {secondLocoEnabled && (
   <>
     <input
-      type="text"
-      placeholder="Lokfahrzeugnummer zweite Lok"
-      value={secondLocoVehicleNumber}
-      onChange={(e) => setSecondLocoVehicleNumber(e.target.value)}
-      style={{ marginTop: "12px" }}
-    />
+  type="text"
+  placeholder="Lokfahrzeugnummer zweite Lok"
+  value={secondLocoVehicleNumber}
+  onChange={(e) =>
+    setSecondLocoVehicleNumber(formatVehicleNumberInput(e.target.value))
+  }
+  style={{ marginTop: "12px" }}
+  inputMode="numeric"
+  maxLength={16}
+  autoComplete="off"
+/>
 
     <select
       value={secondLocoSoleType}
@@ -1657,15 +1682,20 @@ const availableCountries = [
 
       <div className="lok-list">
         <input
-          type="text"
-          placeholder="Lokfahrzeugnummer zweite Lok"
-          value={doubleTractionSecondVehicleNumber}
-          onChange={(e) => {
-            setDoubleTractionSecondVehicleNumber(e.target.value);
-            setDoubleTractionModalError(false);
-          }}
-          className={doubleTractionModalError ? "input-error" : ""}
-        />
+  type="text"
+  placeholder="Lokfahrzeugnummer zweite Lok"
+  value={doubleTractionSecondVehicleNumber}
+  onChange={(e) => {
+    setDoubleTractionSecondVehicleNumber(
+      formatVehicleNumberInput(e.target.value)
+    );
+    setDoubleTractionModalError(false);
+  }}
+  className={doubleTractionModalError ? "input-error" : ""}
+  inputMode="numeric"
+  maxLength={16}
+  autoComplete="off"
+/>
 
         <select
           value={doubleTractionSecondSoleType}
@@ -1987,11 +2017,14 @@ const availableCountries = [
 />
 
         <input
-          type="text"
-          placeholder="Lokfahrzeugnummer"
-          value={locoVehicleNumber}
-          onChange={(e) => setLocoVehicleNumber(e.target.value)}
-        />
+  type="text"
+  placeholder="Lokfahrzeugnummer"
+  value={locoVehicleNumber}
+  onChange={(e) => setLocoVehicleNumber(formatVehicleNumberInput(e.target.value))}
+  inputMode="numeric"
+  maxLength={16}
+  autoComplete="off"
+/>
 
         <label>Bremssohlenart der Lok</label>
         <select

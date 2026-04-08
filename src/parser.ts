@@ -235,12 +235,20 @@ function findDestinationStation(text: string): string {
 }
 
 function parseSummary(text: string): Summary {
+  const allLines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
   const sumLine =
-    text
-      .split("\n")
-      .find((line) => line.trim().startsWith("Summe ")) ?? "";
+    [...allLines]
+      .reverse()
+      .find((line) => line.includes("Summe")) ?? "";
 
   const nums: string[] = sumLine.match(/[\d.,]+/g) || [];
+
+  const festMatch = sumLine.match(/(?:^|\s)(\d{1,4})(?:\s*)$/);
+const festFromLine = festMatch ? parseIntSafe(festMatch[1]) : 0;
 
   // Typischer TrainChecker-Fall:
   // Summe 80 240,80 1.131.955 1.575.415 873 294 135
@@ -252,7 +260,7 @@ function parseSummary(text: string): Summary {
       weightTons: Math.round(parseGermanIntWithDots(nums[3]) / 1000),
       brakeP: parseIntSafe(nums[4]),
       brakeG: parseIntSafe(nums[5]),
-      festKn: parseIntSafe(nums[6]),
+      festKn: festFromLine || parseIntSafe(nums[6]),
     };
   }
 
@@ -273,7 +281,7 @@ function parseSummary(text: string): Summary {
       weightTons: Math.round(parseGermanIntWithDots(nums[3]) / 1000),
       brakeP: parseIntSafe(nums[4]),
       brakeG: 0,
-      festKn: value5,
+      festKn: festFromLine || value5,
     };
   } else {
     // FALLBACK (sehr selten)
@@ -283,7 +291,7 @@ function parseSummary(text: string): Summary {
       weightTons: Math.round(parseGermanIntWithDots(nums[3]) / 1000),
       brakeP: parseIntSafe(nums[4]),
       brakeG: value5,
-      festKn: 0,
+      festKn: festFromLine,
     };
   }
 }
@@ -295,7 +303,7 @@ function parseSummary(text: string): Summary {
       weightTons: Math.round(parseGermanIntWithDots(nums[2]) / 1000),
       brakeP: parseIntSafe(nums[3]),
       brakeG: parseIntSafe(nums[4]),
-      festKn: 0,
+      festKn: festFromLine,
     };
   }
 
