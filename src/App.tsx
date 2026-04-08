@@ -1266,9 +1266,9 @@ const availableCountries = [
 
     setDoubleTraction(newValue);
 
-    if (newValue && !directionChange) {
-      setDoubleTractionModalOpen(true);
-    }
+    if (newValue && printMode === "international" && !directionChange) {
+  setDoubleTractionModalOpen(true);
+}
 
     if (!newValue) {
       setDoubleTractionSecondVehicleNumber("");
