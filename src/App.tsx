@@ -1057,6 +1057,9 @@ const availableCountries = [
     const doubleTractionDisabled =
   printMode === "international" && addLocoAtStation;
 
+  const directionChangeDisabled =
+  printMode === "international" && addLocoAtStation;
+
   return (
     <div className="app">
       <div className="header-card">
@@ -1200,6 +1203,17 @@ const availableCountries = [
             setAddLocoAtStation(newValue);
             if (newValue) {
   setDoubleTraction(false);
+  setDirectionChange(false);
+setDirectionModalOpen(false);
+setDirectionStation("");
+setReduceToOneLocoAfterDirectionChange(false);
+setRemovedLocoAfterDirectionChange("");
+setSecondLocoEnabled(null);
+setSecondLocoVehicleNumber("");
+setSecondLocoSoleType("");
+setSecondLocoInsertPosition("");
+setSecondLocoInsertPositionError(false);
+setKeepDoubleTractionAfterDirectionChange(null);
 }
 
             if (newValue) {
@@ -1293,26 +1307,30 @@ const availableCountries = [
       )}
 
       <div
-        className={`toggle ${directionChange ? "active" : ""}`}
-        onClick={() => {
-          const newValue = !directionChange;
-          setDirectionChange(newValue);
+  className={`toggle ${directionChange ? "active" : ""} ${
+    directionChangeDisabled ? "disabled" : ""
+  }`}
+  onClick={() => {
+    if (directionChangeDisabled) return;
 
-          if (newValue) {
-            setDirectionModalOpen(true);
-          } else {
-  setDirectionStation("");
-  setReduceToOneLocoAfterDirectionChange(false);
-  setRemovedLocoAfterDirectionChange("");
-  setSecondLocoEnabled(null);
-  setSecondLocoVehicleNumber("");
-  setSecondLocoSoleType("");
-  setSecondLocoInsertPosition("");
-  setSecondLocoInsertPositionError(false);
-  setKeepDoubleTractionAfterDirectionChange(null);
-}
-        }}
-      />
+    const newValue = !directionChange;
+    setDirectionChange(newValue);
+
+    if (newValue) {
+      setDirectionModalOpen(true);
+    } else {
+      setDirectionStation("");
+      setReduceToOneLocoAfterDirectionChange(false);
+      setRemovedLocoAfterDirectionChange("");
+      setSecondLocoEnabled(null);
+      setSecondLocoVehicleNumber("");
+      setSecondLocoSoleType("");
+      setSecondLocoInsertPosition("");
+      setSecondLocoInsertPositionError(false);
+      setKeepDoubleTractionAfterDirectionChange(null);
+    }
+  }}
+/>
     </div>
   </div>
 
