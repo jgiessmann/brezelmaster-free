@@ -127,6 +127,7 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
     weightTons: 88,
     brakeWeightP: 88,
     brakeWeightG: 75,
+    brakeWeightPE: 0,
     lengthMeters: 15,
     vmax: 100,
     axles: 4,
@@ -137,6 +138,7 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
     weightTons: 72,
     brakeWeightP: 66,
     brakeWeightG: 53,
+    brakeWeightPE: 0,
     lengthMeters: 13,
     vmax: 60,
     axles: 4,
@@ -147,6 +149,7 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
     weightTons: 62,
     brakeWeightP: 65,
     brakeWeightG: 57,
+    brakeWeightPE: 0,
     lengthMeters: 13,
     vmax: 100,
     axles: 4,
@@ -157,10 +160,22 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
     weightTons: 90,
     brakeWeightP: 106,
     brakeWeightG: 86,
+    brakeWeightPE: 0,
     lengthMeters: 17,
     vmax: 120,
     axles: 4,
     festKn: 41,
+  },
+  {
+    name: "BR193 (Vectron)",
+    weightTons: 90,
+    brakeWeightP: 95,
+    brakeWeightG: 72,
+    brakeWeightPE: 105,
+    lengthMeters: 19,
+    vmax: 160,
+    axles: 4,
+    festKn: 56,
   },
 ];
 const [customLokOpen, setCustomLokOpen] = useState(false);
@@ -175,6 +190,16 @@ const [customLokAxles, setCustomLokAxles] = useState("");
 const [customLokFestKn, setCustomLokFestKn] = useState("");
 const [secondCustomLokFestKn, setSecondCustomLokFestKn] = useState("");
 const [directionModalOpen, setDirectionModalOpen] = useState(false);
+const [customLokBrakePE, setCustomLokBrakePE] = useState("");
+const [dynamicBrakeModalOpen, setDynamicBrakeModalOpen] = useState(false);
+const [dynamicBrakeEffective, setDynamicBrakeEffective] = useState<boolean | null>(null);
+const [secondCustomLokBrakePE, setSecondCustomLokBrakePE] = useState("");
+const [secondDynamicBrakeModalOpen, setSecondDynamicBrakeModalOpen] = useState(false);
+const [secondDynamicBrakeEffective, setSecondDynamicBrakeEffective] = useState<boolean | null>(null);
+
+const [addedCustomLocoBrakePE, setAddedCustomLocoBrakePE] = useState("");
+const [addedDynamicBrakeModalOpen, setAddedDynamicBrakeModalOpen] = useState(false);
+const [addedDynamicBrakeEffective, setAddedDynamicBrakeEffective] = useState<boolean | null>(null);
 
 const [reduceToOneLocoAfterDirectionChange, setReduceToOneLocoAfterDirectionChange] = useState(false);
 const [removedLocoAfterDirectionChange, setRemovedLocoAfterDirectionChange] = useState<"loco1" | "loco2" | "">("");
@@ -214,6 +239,26 @@ const [customErrors, setCustomErrors] = useState({
   axles: false,
 });
 
+const [secondCustomErrors, setSecondCustomErrors] = useState({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
+
+const [addedCustomErrors, setAddedCustomErrors] = useState({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
+
 const [mainErrors, setMainErrors] = useState({
   minimumBrakePercentage: false,
   timetableSpeed: false,
@@ -227,17 +272,81 @@ const [isGenerating, setIsGenerating] = useState(false);
 
 const [directionError, setDirectionError] = useState(false);
 
+function hasAtLeastFourActiveWagonBrakes(parsedSummary: ParsedSummary | null): boolean {
+  if (!parsedSummary) return false;
+  return parsedSummary.multiReleaseBrakeCount >= 4;
+}
+
+function handleSelectMainLokFromList(lokName: string) {
+  setSelectedLok("list");
+  setSelectedLokName(lokName);
+  setLokSelectOpen(false);
+
+  const lok = locomotives.find((item) => item.name === lokName);
+
+  if (lok && Number(lok.brakeWeightPE || 0) > 0) {
+    setDynamicBrakeEffective(null);
+    setDynamicBrakeModalOpen(true);
+  } else {
+    setDynamicBrakeEffective(false);
+  }
+}
+
+function handleSelectSecondLokFromList(lokName: string) {
+  setSecondSelectedLok("list");
+  setSecondSelectedLokName(lokName);
+  setSecondLokSelectOpen(false);
+
+  const lok = locomotives.find((item) => item.name === lokName);
+
+  if (lok && Number(lok.brakeWeightPE || 0) > 0) {
+    setSecondDynamicBrakeEffective(null);
+    setSecondDynamicBrakeModalOpen(true);
+  } else {
+    setSecondDynamicBrakeEffective(false);
+  }
+}
+
+function handleSelectAddedLokFromList(lokName: string) {
+  setAddedLocoSelectedType("list");
+  setAddedLocoSelectedName(lokName);
+  setAddedLocoSelectOpen(false);
+
+  const lok = locomotives.find((item) => item.name === lokName);
+
+  if (lok && Number(lok.brakeWeightPE || 0) > 0) {
+    setAddedDynamicBrakeEffective(null);
+    setAddedDynamicBrakeModalOpen(true);
+  } else {
+    setAddedDynamicBrakeEffective(false);
+  }
+}
+
 function determineLocoBrakeWeight(
   lok: {
     brakeWeightP: number;
     brakeWeightG: number;
+    brakeWeightPE?: number;
   },
   wagonWeight: number,
   wagonLength: number,
-  selectedMode: "P" | "G"
+  selectedMode: "P" | "G",
+  dynamicBrakeEffective: boolean,
+  hasFourActiveBrakes: boolean
 ): number {
+  const canUseDynamicBrake =
+    selectedMode === "P" &&
+    dynamicBrakeEffective &&
+    wagonWeight <= 800 &&
+    hasFourActiveBrakes &&
+    Number(lok.brakeWeightPE || 0) > 0;
+
   if (selectedMode === "P") {
     if (wagonWeight <= 800) {
+      if (canUseDynamicBrake) {
+        return Number(lok.brakeWeightPE || 0);
+      }
+
       if (wagonLength <= 500) {
         return lok.brakeWeightP;
       }
@@ -315,6 +424,7 @@ const activeLok =
         weightTons: Number(customLokWeight) || 0,
         brakeWeightP: Number(customLokBrakeP) || 0,
         brakeWeightG: Number(customLokBrakeG) || 0,
+        brakeWeightPE: Number(customLokBrakePE) || 0,
         lengthMeters: Number(customLokLength) || 0,
         vmax: Number(customLokVmax) || 0,
         axles: Number(customLokAxles) || 0,
@@ -334,6 +444,7 @@ const secondActiveLok =
         weightTons: Number(secondCustomLokWeight) || 0,
         brakeWeightP: Number(secondCustomLokBrakeP) || 0,
         brakeWeightG: Number(secondCustomLokBrakeG) || 0,
+        brakeWeightPE: Number(secondCustomLokBrakePE) || 0,
         lengthMeters: Number(secondCustomLokLength) || 0,
         vmax: Number(secondCustomLokVmax) || 0,
         axles: Number(secondCustomLokAxles) || 0,
@@ -358,6 +469,7 @@ const addedActiveLok =
         weightTons: Number(addedCustomLocoWeight) || 0,
         brakeWeightP: Number(addedCustomLocoBrakeP) || 0,
         brakeWeightG: Number(addedCustomLocoBrakeG) || 0,
+        brakeWeightPE: Number(addedCustomLocoBrakePE) || 0,
         lengthMeters: Number(addedCustomLocoLength) || 0,
         vmax: Number(addedCustomLocoVmax) || 0,
         axles: Number(addedCustomLocoAxles) || 0,
@@ -390,11 +502,15 @@ if (hasMainError) {
     return;
   }
 
-  const locoBrakeWeight = determineLocoBrakeWeight(
+  const hasFourActiveBrakes = hasAtLeastFourActiveWagonBrakes(parsedSummary);
+
+const locoBrakeWeight = determineLocoBrakeWeight(
   activeLok,
   parsedSummary.totalWeightTons,
   parsedSummary.totalLengthMeters,
-  mode
+  mode,
+  dynamicBrakeEffective === true,
+  hasFourActiveBrakes
 );
 
 const secondLocoBrakeWeight =
@@ -403,20 +519,25 @@ const secondLocoBrakeWeight =
         tractionSecondLok,
         parsedSummary.totalWeightTons,
         parsedSummary.totalLengthMeters,
-        mode
+        mode,
+        doubleTraction
+          ? dynamicBrakeEffective === true
+          : secondDynamicBrakeEffective === true,
+        hasFourActiveBrakes
       )
     : 0;
 
-    const addedLocoBrakeWeight =
+const addedLocoBrakeWeight =
   addedActiveLok
     ? determineLocoBrakeWeight(
         addedActiveLok,
         parsedSummary.totalWeightTons,
         parsedSummary.totalLengthMeters,
-        mode
+        mode,
+        addedDynamicBrakeEffective === true,
+        hasFourActiveBrakes
       )
     : 0;
-
 const addedLocoFestKn =
   addedActiveLok ? addedActiveLok.festKn || 0 : 0;
 
@@ -975,6 +1096,43 @@ if (directionChange && directionStation.trim() !== "") {
   
   const warnings: string[] = [];
 
+ const tooFewActiveBrakesForMainDynamicBrake =
+  Number(activeLok.brakeWeightPE || 0) > 0 &&
+  dynamicBrakeEffective === true &&
+  mode === "P" &&
+  parsedSummary.totalWeightTons <= 800 &&
+  !hasAtLeastFourActiveWagonBrakes(parsedSummary);
+
+const tooFewActiveBrakesForSecondDynamicBrake =
+  !!tractionSecondLok &&
+  Number(tractionSecondLok.brakeWeightPE || 0) > 0 &&
+  (
+    doubleTraction
+      ? dynamicBrakeEffective === true
+      : secondDynamicBrakeEffective === true
+  ) &&
+  mode === "P" &&
+  parsedSummary.totalWeightTons <= 800 &&
+  !hasAtLeastFourActiveWagonBrakes(parsedSummary);
+
+const tooFewActiveBrakesForAddedDynamicBrake =
+  !!addedActiveLok &&
+  Number(addedActiveLok.brakeWeightPE || 0) > 0 &&
+  addedDynamicBrakeEffective === true &&
+  mode === "P" &&
+  parsedSummary.totalWeightTons <= 800 &&
+  !hasAtLeastFourActiveWagonBrakes(parsedSummary);
+
+if (
+  tooFewActiveBrakesForMainDynamicBrake ||
+  tooFewActiveBrakesForSecondDynamicBrake ||
+  tooFewActiveBrakesForAddedDynamicBrake
+) {
+  warnings.push(
+    "Achtung! Dynamische Bremse darf nicht angerechnet werden, da weniger als 4 Wagen im Zug eine wirkende Druckluftbremse haben! Es wird automatisch Bremsgewicht P verwendet!"
+  );
+}
+
 if (missingBrakePercentage > 0) {
   warnings.push(
     `Achtung! Mindestbremshundertstel nicht erreicht. Es fehlen ${missingBrakePercentage} Bremshundertstel. Kontaktaufnahme mit betriebsleitender Stelle erforderlich!`
@@ -1233,7 +1391,19 @@ setKeepDoubleTractionAfterDirectionChange(null);
               setAddedCustomLocoLength("");
               setAddedCustomLocoVmax("");
               setAddedCustomLocoAxles("");
+              setAddedCustomErrors({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
               setAddedCustomLocoFestKn("");
+              setAddedCustomLocoBrakePE("");
+setAddedDynamicBrakeEffective(null);
+setAddedDynamicBrakeModalOpen(false);
               setAddLocoModalError(false);
             }
           }}
@@ -1457,15 +1627,15 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
       <div className="lok-list">
         {locomotives.map((lok) => (
-          <button
-            key={lok.name}
-            type="button"
-            onClick={() => setSelectedLokName(lok.name)}
-            className={selectedLokName === lok.name ? "lok-list-button active" : "lok-list-button"}
-          >
-            {lok.name}
-          </button>
-        ))}
+  <button
+    key={lok.name}
+    type="button"
+    onClick={() => handleSelectMainLokFromList(lok.name)}
+    className={selectedLokName === lok.name ? "lok-list-button active" : "lok-list-button"}
+  >
+    {lok.name}
+  </button>
+))}
       </div>
 
       <div className="modal-actions">
@@ -1488,19 +1658,19 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
       <div className="lok-list">
         {locomotives.map((lok) => (
-          <button
-            key={lok.name}
-            type="button"
-            onClick={() => setSecondSelectedLokName(lok.name)}
-            className={
-              secondSelectedLokName === lok.name
-                ? "lok-list-button active"
-                : "lok-list-button"
-            }
-          >
-            {lok.name}
-          </button>
-        ))}
+  <button
+    key={lok.name}
+    type="button"
+    onClick={() => handleSelectSecondLokFromList(lok.name)}
+    className={
+      secondSelectedLokName === lok.name
+        ? "lok-list-button active"
+        : "lok-list-button"
+    }
+  >
+    {lok.name}
+  </button>
+))}
       </div>
 
       <div className="modal-actions">
@@ -1523,53 +1693,67 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
       <div className="lok-list">
         <input
-          type="text"
-          placeholder="Lokbezeichnung"
-          value={secondCustomLokName}
-          onChange={(e) => setSecondCustomLokName(e.target.value)}
-        />
+  type="text"
+  placeholder="Lokbezeichnung"
+  value={secondCustomLokName}
+  onChange={(e) => setSecondCustomLokName(e.target.value)}
+  className={secondCustomErrors.name ? "input-error" : ""}
+/>
 
         <input
-          type="number"
-          placeholder="Gewicht [t]"
-          value={secondCustomLokWeight}
-          onChange={(e) => setSecondCustomLokWeight(e.target.value)}
-        />
+  type="number"
+  placeholder="Gewicht [t]"
+  value={secondCustomLokWeight}
+  onChange={(e) => setSecondCustomLokWeight(e.target.value)}
+  className={secondCustomErrors.weight ? "input-error" : ""}
+/>
 
         <input
-          type="number"
-          placeholder="Bremsgewicht P [t]"
-          value={secondCustomLokBrakeP}
-          onChange={(e) => setSecondCustomLokBrakeP(e.target.value)}
-        />
+  type="number"
+  placeholder="Bremsgewicht P [t]"
+  value={secondCustomLokBrakeP}
+  onChange={(e) => setSecondCustomLokBrakeP(e.target.value)}
+  className={secondCustomErrors.brakeP ? "input-error" : ""}
+/>
 
         <input
-          type="number"
-          placeholder="Bremsgewicht G [t]"
-          value={secondCustomLokBrakeG}
-          onChange={(e) => setSecondCustomLokBrakeG(e.target.value)}
-        />
+  type="number"
+  placeholder="Bremsgewicht P+E [t] (optional)"
+  value={secondCustomLokBrakePE}
+  onChange={(e) => setSecondCustomLokBrakePE(e.target.value)}
+/>
 
         <input
-          type="number"
-          placeholder="Länge [m]"
-          value={secondCustomLokLength}
-          onChange={(e) => setSecondCustomLokLength(e.target.value)}
-        />
+  type="number"
+  placeholder="Bremsgewicht G [t]"
+  value={secondCustomLokBrakeG}
+  onChange={(e) => setSecondCustomLokBrakeG(e.target.value)}
+  className={secondCustomErrors.brakeG ? "input-error" : ""}
+/>
 
         <input
-          type="number"
-          placeholder="Achsenzahl"
-          value={secondCustomLokAxles}
-          onChange={(e) => setSecondCustomLokAxles(e.target.value)}
-        />
+  type="number"
+  placeholder="Länge [m]"
+  value={secondCustomLokLength}
+  onChange={(e) => setSecondCustomLokLength(e.target.value)}
+  className={secondCustomErrors.length ? "input-error" : ""}
+/>
 
         <input
-          type="number"
-          placeholder="Zul. Höchstgeschwindigkeit [km/h]"
-          value={secondCustomLokVmax}
-          onChange={(e) => setSecondCustomLokVmax(e.target.value)}
-        />
+  type="number"
+  placeholder="Achsenzahl"
+  value={secondCustomLokAxles}
+  onChange={(e) => setSecondCustomLokAxles(e.target.value)}
+  className={secondCustomErrors.axles ? "input-error" : ""}
+/>
+
+        <input
+  type="number"
+  placeholder="Zul. Höchstgeschwindigkeit [km/h]"
+  value={secondCustomLokVmax}
+  onChange={(e) => setSecondCustomLokVmax(e.target.value)}
+  className={secondCustomErrors.vmax ? "input-error" : ""}
+/>
 
         <input
   type="number"
@@ -1581,20 +1765,65 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
       <div className="modal-actions">
         <button
-          type="button"
-          className="secondary"
-          onClick={() => setSecondCustomLokOpen(false)}
-        >
-          Zurück
-        </button>
+  type="button"
+  className="secondary"
+  onClick={() => {
+    setSecondCustomLokOpen(false);
+    setSecondCustomErrors({
+      name: false,
+      weight: false,
+      brakeP: false,
+      brakeG: false,
+      length: false,
+      vmax: false,
+      axles: false,
+    });
+  }}
+>
+  Zurück
+</button>
 
         <button
-          type="button"
-          className="primary"
-          onClick={() => setSecondCustomLokOpen(false)}
-        >
-          Anwenden
-        </button>
+  type="button"
+  className="primary"
+  onClick={() => {
+    const errors = {
+      name: secondCustomLokName.trim() === "",
+      weight: Number(secondCustomLokWeight) <= 0,
+      brakeP: Number(secondCustomLokBrakeP) <= 0,
+      brakeG: Number(secondCustomLokBrakeG) <= 0,
+      length: Number(secondCustomLokLength) <= 0,
+      vmax: Number(secondCustomLokVmax) <= 0,
+      axles: Number(secondCustomLokAxles) <= 0,
+    };
+
+    setSecondCustomErrors(errors);
+
+    const hasError = Object.values(errors).some((e) => e);
+
+    if (hasError) return;
+    setSecondCustomErrors({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
+
+    setSecondCustomLokOpen(false);
+
+    if (Number(secondCustomLokBrakePE) > 0) {
+      setSecondDynamicBrakeEffective(null);
+      setSecondDynamicBrakeModalOpen(true);
+    } else {
+      setSecondDynamicBrakeEffective(false);
+    }
+  }}
+>
+  Anwenden
+</button>
       </div>
     </div>
   </div>
@@ -1629,6 +1858,13 @@ setKeepDoubleTractionAfterDirectionChange(null);
           onChange={(e) => setCustomLokBrakeP(e.target.value)}
           className={customErrors.brakeP ? "input-error" : ""}
         />
+
+        <input
+  type="number"
+  placeholder="Bremsgewicht P+E [t] (optional)"
+  value={customLokBrakePE}
+  onChange={(e) => setCustomLokBrakePE(e.target.value)}
+/>
 
         <input
           type="number"
@@ -1672,39 +1908,66 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
       <div className="modal-actions">
   <button
-    type="button"
-    className="secondary"
-    onClick={() => setCustomLokOpen(false)}
-  >
-    Zurück
-  </button>
+  type="button"
+  className="secondary"
+  onClick={() => {
+    setCustomLokOpen(false);
+    setCustomErrors({
+      name: false,
+      weight: false,
+      brakeP: false,
+      brakeG: false,
+      length: false,
+      vmax: false,
+      axles: false,
+    });
+  }}
+>
+  Zurück
+</button>
 
   <button
-    type="button"
-    className="primary"
-    onClick={() => {
-      const errors = {
-        name: customLokName.trim() === "",
-        weight: Number(customLokWeight) <= 0,
-        brakeP: Number(customLokBrakeP) <= 0,
-        brakeG: Number(customLokBrakeG) <= 0,
-        length: Number(customLokLength) <= 0,
-        vmax: Number(customLokVmax) <= 0,
-        axles: Number(customLokAxles) <= 0,
-      };
+  type="button"
+  className="primary"
+  onClick={() => {
+    const errors = {
+      name: customLokName.trim() === "",
+      weight: Number(customLokWeight) <= 0,
+      brakeP: Number(customLokBrakeP) <= 0,
+      brakeG: Number(customLokBrakeG) <= 0,
+      length: Number(customLokLength) <= 0,
+      vmax: Number(customLokVmax) <= 0,
+      axles: Number(customLokAxles) <= 0,
+    };
 
-      setCustomErrors(errors);
+    setCustomErrors(errors);
 
-      const hasError = Object.values(errors).some((e) => e);
+    const hasError = Object.values(errors).some((e) => e);
 
-      if (hasError) return;
+    if (hasError) return;
+    setCustomErrors({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
 
-      setSelectedLok("custom");
-      setCustomLokOpen(false);
-    }}
-  >
-    Anwenden
-  </button>
+    setSelectedLok("custom");
+    setCustomLokOpen(false);
+
+    if (Number(customLokBrakePE) > 0) {
+      setDynamicBrakeEffective(null);
+      setDynamicBrakeModalOpen(true);
+    } else {
+      setDynamicBrakeEffective(false);
+    }
+  }}
+>
+  Anwenden
+</button>
 </div>
     </div>
   </div>
@@ -1831,6 +2094,19 @@ setKeepDoubleTractionAfterDirectionChange(null);
   setSecondCustomLokLength("");
   setSecondCustomLokVmax("");
   setSecondCustomLokAxles("");
+  setSecondCustomErrors({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
+  setSecondCustomLokBrakePE("");
+setSecondDynamicBrakeEffective(null);
+setSecondDynamicBrakeModalOpen(false);
+setSecondCustomLokFestKn("");
   setSecondLocoVehicleNumber("");
   setSecondLocoSoleType("");
   setSecondLocoInsertPosition("");
@@ -1844,28 +2120,28 @@ setKeepDoubleTractionAfterDirectionChange(null);
     {secondLocoEnabled && (
       <div className="lok-row" style={{ marginTop: "12px" }}>
         <button
-          type="button"
-          className={`lok-box ${secondSelectedLok === "list" ? "active" : ""}`}
-          onClick={() => {
-            setSecondSelectedLok("list");
-            setSecondLokSelectOpen(true);
-          }}
-        >
-          Lok aus Liste
-          <span>Aktuell: {secondSelectedLokName}</span>
-        </button>
+  type="button"
+  className={`lok-box ${secondSelectedLok === "list" ? "active" : ""}`}
+  onClick={() => {
+    setSecondSelectedLok("list");
+    setSecondLokSelectOpen(true);
+  }}
+>
+  Lok aus Liste
+  <span>Aktuell: {secondSelectedLokName}</span>
+</button>
 
         <button
-          type="button"
-          className={`lok-box ${secondSelectedLok === "custom" ? "active" : ""}`}
-          onClick={() => {
-            setSecondSelectedLok("custom");
-            setSecondCustomLokOpen(true);
-          }}
-        >
-          Eigene Lok
-          <span>{secondCustomLokName || "Manuell eingeben"}</span>
-        </button>
+  type="button"
+  className={`lok-box ${secondSelectedLok === "custom" ? "active" : ""}`}
+  onClick={() => {
+    setSecondSelectedLok("custom");
+    setSecondCustomLokOpen(true);
+  }}
+>
+  Eigene Lok
+  <span>{secondCustomLokName || "Manuell eingeben"}</span>
+</button>
       </div>
     )}
 
@@ -1933,6 +2209,19 @@ setKeepDoubleTractionAfterDirectionChange(null);
   setReduceToOneLocoAfterDirectionChange(false);
   setRemovedLocoAfterDirectionChange("");
   setSecondLocoEnabled(null);
+  setSecondCustomErrors({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
+  setSecondCustomLokBrakePE("");
+setSecondDynamicBrakeEffective(null);
+setSecondDynamicBrakeModalOpen(false);
+setSecondCustomLokFestKn("");
   setSecondLocoVehicleNumber("");
   setSecondLocoSoleType("");
   setSecondLocoInsertPosition("");
@@ -2083,28 +2372,28 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
         <div className="lok-row" style={{ marginTop: "12px" }}>
           <button
-            type="button"
-            className={`lok-box ${addedLocoSelectedType === "list" ? "active" : ""}`}
-            onClick={() => {
-              setAddedLocoSelectedType("list");
-              setAddedLocoSelectOpen(true);
-            }}
-          >
-            Lok aus Liste
-            <span>Aktuell: {addedLocoSelectedName}</span>
-          </button>
+  type="button"
+  className={`lok-box ${addedLocoSelectedType === "list" ? "active" : ""}`}
+  onClick={() => {
+    setAddedLocoSelectedType("list");
+    setAddedLocoSelectOpen(true);
+  }}
+>
+  Lok aus Liste
+  <span>Aktuell: {addedLocoSelectedName}</span>
+</button>
 
           <button
-            type="button"
-            className={`lok-box ${addedLocoSelectedType === "custom" ? "active" : ""}`}
-            onClick={() => {
-              setAddedLocoSelectedType("custom");
-              setAddedCustomLocoOpen(true);
-            }}
-          >
-            Eigene Lok
-            <span>{addedCustomLocoName || "Manuell eingeben"}</span>
-          </button>
+  type="button"
+  className={`lok-box ${addedLocoSelectedType === "custom" ? "active" : ""}`}
+  onClick={() => {
+    setAddedLocoSelectedType("custom");
+    setAddedCustomLocoOpen(true);
+  }}
+>
+  Eigene Lok
+  <span>{addedCustomLocoName || "Manuell eingeben"}</span>
+</button>
         </div>
 
         <input
@@ -2176,7 +2465,19 @@ setKeepDoubleTractionAfterDirectionChange(null);
             setAddedCustomLocoLength("");
             setAddedCustomLocoVmax("");
             setAddedCustomLocoAxles("");
+            setAddedCustomErrors({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
             setAddedCustomLocoFestKn("");
+            setAddedCustomLocoBrakePE("");
+setAddedDynamicBrakeEffective(null);
+setAddedDynamicBrakeModalOpen(false);
             setAddLocoModalError(false);
           }}
         >
@@ -2214,19 +2515,19 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
       <div className="lok-list">
         {locomotives.map((lok) => (
-          <button
-            key={lok.name}
-            type="button"
-            onClick={() => setAddedLocoSelectedName(lok.name)}
-            className={
-              addedLocoSelectedName === lok.name
-                ? "lok-list-button active"
-                : "lok-list-button"
-            }
-          >
-            {lok.name}
-          </button>
-        ))}
+  <button
+    key={lok.name}
+    type="button"
+    onClick={() => handleSelectAddedLokFromList(lok.name)}
+    className={
+      addedLocoSelectedName === lok.name
+        ? "lok-list-button active"
+        : "lok-list-button"
+    }
+  >
+    {lok.name}
+  </button>
+))}
       </div>
 
       <div className="modal-actions">
@@ -2249,53 +2550,67 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
       <div className="lok-list">
         <input
-          type="text"
-          placeholder="Lokbezeichnung"
-          value={addedCustomLocoName}
-          onChange={(e) => setAddedCustomLocoName(e.target.value)}
-        />
+  type="text"
+  placeholder="Lokbezeichnung"
+  value={addedCustomLocoName}
+  onChange={(e) => setAddedCustomLocoName(e.target.value)}
+  className={addedCustomErrors.name ? "input-error" : ""}
+/>
 
         <input
-          type="number"
-          placeholder="Gewicht [t]"
-          value={addedCustomLocoWeight}
-          onChange={(e) => setAddedCustomLocoWeight(e.target.value)}
-        />
+  type="number"
+  placeholder="Gewicht [t]"
+  value={addedCustomLocoWeight}
+  onChange={(e) => setAddedCustomLocoWeight(e.target.value)}
+  className={addedCustomErrors.weight ? "input-error" : ""}
+/>
+
+       <input
+  type="number"
+  placeholder="Bremsgewicht P [t]"
+  value={addedCustomLocoBrakeP}
+  onChange={(e) => setAddedCustomLocoBrakeP(e.target.value)}
+  className={addedCustomErrors.brakeP ? "input-error" : ""}
+/>
 
         <input
-          type="number"
-          placeholder="Bremsgewicht P [t]"
-          value={addedCustomLocoBrakeP}
-          onChange={(e) => setAddedCustomLocoBrakeP(e.target.value)}
-        />
+  type="number"
+  placeholder="Bremsgewicht P+E [t] (optional)"
+  value={addedCustomLocoBrakePE}
+  onChange={(e) => setAddedCustomLocoBrakePE(e.target.value)}
+/>
 
         <input
-          type="number"
-          placeholder="Bremsgewicht G [t]"
-          value={addedCustomLocoBrakeG}
-          onChange={(e) => setAddedCustomLocoBrakeG(e.target.value)}
-        />
+  type="number"
+  placeholder="Bremsgewicht G [t]"
+  value={addedCustomLocoBrakeG}
+  onChange={(e) => setAddedCustomLocoBrakeG(e.target.value)}
+  className={addedCustomErrors.brakeG ? "input-error" : ""}
+/>
 
         <input
-          type="number"
-          placeholder="Länge [m]"
-          value={addedCustomLocoLength}
-          onChange={(e) => setAddedCustomLocoLength(e.target.value)}
-        />
+  type="number"
+  placeholder="Länge [m]"
+  value={addedCustomLocoLength}
+  onChange={(e) => setAddedCustomLocoLength(e.target.value)}
+  className={addedCustomErrors.length ? "input-error" : ""}
+/>
 
-        <input
-          type="number"
-          placeholder="Achsenzahl"
-          value={addedCustomLocoAxles}
-          onChange={(e) => setAddedCustomLocoAxles(e.target.value)}
-        />
+       <input
+  type="number"
+  placeholder="Achsenzahl"
+  value={addedCustomLocoAxles}
+  onChange={(e) => setAddedCustomLocoAxles(e.target.value)}
+  className={addedCustomErrors.axles ? "input-error" : ""}
+/>
 
-        <input
-          type="number"
-          placeholder="Zul. Höchstgeschwindigkeit [km/h]"
-          value={addedCustomLocoVmax}
-          onChange={(e) => setAddedCustomLocoVmax(e.target.value)}
-        />
+       <input
+  type="number"
+  placeholder="Zul. Höchstgeschwindigkeit [km/h]"
+  value={addedCustomLocoVmax}
+  onChange={(e) => setAddedCustomLocoVmax(e.target.value)}
+  className={addedCustomErrors.vmax ? "input-error" : ""}
+/>
 
         <input
           type="number"
@@ -2307,20 +2622,65 @@ setKeepDoubleTractionAfterDirectionChange(null);
 
       <div className="modal-actions">
         <button
-          type="button"
-          className="secondary"
-          onClick={() => setAddedCustomLocoOpen(false)}
-        >
-          Zurück
-        </button>
+  type="button"
+  className="secondary"
+  onClick={() => {
+    setAddedCustomLocoOpen(false);
+    setAddedCustomErrors({
+      name: false,
+      weight: false,
+      brakeP: false,
+      brakeG: false,
+      length: false,
+      vmax: false,
+      axles: false,
+    });
+  }}
+>
+  Zurück
+</button>
 
-        <button
-          type="button"
-          className="primary"
-          onClick={() => setAddedCustomLocoOpen(false)}
-        >
-          Anwenden
-        </button>
+   <button
+  type="button"
+  className="primary"
+  onClick={() => {
+    const errors = {
+      name: addedCustomLocoName.trim() === "",
+      weight: Number(addedCustomLocoWeight) <= 0,
+      brakeP: Number(addedCustomLocoBrakeP) <= 0,
+      brakeG: Number(addedCustomLocoBrakeG) <= 0,
+      length: Number(addedCustomLocoLength) <= 0,
+      vmax: Number(addedCustomLocoVmax) <= 0,
+      axles: Number(addedCustomLocoAxles) <= 0,
+    };
+
+    setAddedCustomErrors(errors);
+
+    const hasError = Object.values(errors).some((e) => e);
+
+    if (hasError) return;
+    setAddedCustomErrors({
+  name: false,
+  weight: false,
+  brakeP: false,
+  brakeG: false,
+  length: false,
+  vmax: false,
+  axles: false,
+});
+
+    setAddedCustomLocoOpen(false);
+
+    if (Number(addedCustomLocoBrakePE) > 0) {
+      setAddedDynamicBrakeEffective(null);
+      setAddedDynamicBrakeModalOpen(true);
+    } else {
+      setAddedDynamicBrakeEffective(false);
+    }
+  }}
+>
+  Anwenden
+</button>
       </div>
     </div>
   </div>
@@ -2377,6 +2737,129 @@ setKeepDoubleTractionAfterDirectionChange(null);
     </button>
   )}
 </div>
+    </div>
+  </div>
+)}
+
+{dynamicBrakeModalOpen && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      <h2>Dynamische Bremse</h2>
+
+      <label>Ist die dynamische Bremse wirksam?</label>
+
+      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+        <button
+          type="button"
+          className={dynamicBrakeEffective === true ? "active" : ""}
+          onClick={() => setDynamicBrakeEffective(true)}
+        >
+          Ja
+        </button>
+
+        <button
+          type="button"
+          className={dynamicBrakeEffective === false ? "active" : ""}
+          onClick={() => setDynamicBrakeEffective(false)}
+        >
+          Nein
+        </button>
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            if (dynamicBrakeEffective === null) return;
+            setDynamicBrakeModalOpen(false);
+          }}
+        >
+          Anwenden
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{secondDynamicBrakeModalOpen && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      <h2>Dynamische Bremse zweite Lok</h2>
+
+      <label>Ist die dynamische Bremse wirksam?</label>
+
+      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+        <button
+          type="button"
+          className={secondDynamicBrakeEffective === true ? "active" : ""}
+          onClick={() => setSecondDynamicBrakeEffective(true)}
+        >
+          Ja
+        </button>
+
+        <button
+          type="button"
+          className={secondDynamicBrakeEffective === false ? "active" : ""}
+          onClick={() => setSecondDynamicBrakeEffective(false)}
+        >
+          Nein
+        </button>
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            if (secondDynamicBrakeEffective === null) return;
+            setSecondDynamicBrakeModalOpen(false);
+          }}
+        >
+          Anwenden
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{addedDynamicBrakeModalOpen && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      <h2>Dynamische Bremse zusätzliche Lok</h2>
+
+      <label>Ist die dynamische Bremse wirksam?</label>
+
+      <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+        <button
+          type="button"
+          className={addedDynamicBrakeEffective === true ? "active" : ""}
+          onClick={() => setAddedDynamicBrakeEffective(true)}
+        >
+          Ja
+        </button>
+
+        <button
+          type="button"
+          className={addedDynamicBrakeEffective === false ? "active" : ""}
+          onClick={() => setAddedDynamicBrakeEffective(false)}
+        >
+          Nein
+        </button>
+      </div>
+
+      <div className="modal-actions">
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            if (addedDynamicBrakeEffective === null) return;
+            setAddedDynamicBrakeModalOpen(false);
+          }}
+        >
+          Anwenden
+        </button>
+      </div>
     </div>
   </div>
 )}
