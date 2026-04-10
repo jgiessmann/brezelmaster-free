@@ -118,28 +118,33 @@ export async function createPdf(
     });
 
     internationalState.countries?.slice(0, 3).forEach((country: any, index: number) => {
-      const xPositions = [511, 567, 617];
+  const fieldCenters = [526, 578, 628];
+  const text = String(country.trainCategory || "");
+  const textWidth = font.widthOfTextAtSize(text, 14);
 
-      page.drawText(country.trainCategory || "", {
-        x: xPositions[index],
-        y: 1191 - 100,
-        size: 14,
-        font,
-        color: rgb(8 / 255, 12 / 255, 218 / 255),
-      });
-    });
+  page.drawText(text, {
+    x: fieldCenters[index] - textWidth / 2,
+    y: 1191 - 100,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  });
+});
 
     internationalState.countries?.slice(0, 3).forEach((country: any, index: number) => {
-      const xPositions = [514, 567, 617];
+  const fieldCenters = [526, 578, 628];
 
-      page.drawText(country.vmax || "", {
-        x: xPositions[index],
-        y: 1191 - 141,
-        size: 14,
-        font,
-        color: rgb(8 / 255, 12 / 255, 218 / 255),
-      });
-    });
+  const text = String(country.vmax || "");
+  const textWidth = font.widthOfTextAtSize(text, 14);
+
+  page.drawText(text, {
+    x: fieldCenters[index] - textWidth / 2,
+    y: 1191 - 141,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  });
+});
 
     // ETCS-Level
     page.drawText(internationalState.etcsDisplay || "", {
@@ -534,13 +539,19 @@ if (internationalState.exceptionalConsignment && internationalState.bzaNumber) {
     });
 
     // Pos. 1 - 35 Bremsstellung
-    page.drawText(internationalState.firstLocoMode || "", {
-      x: 543,
-      y: 1191 - 924,
-      size: 14,
-      font,
-      color: rgb(8 / 255, 12 / 255, 218 / 255),
-    });
+{
+  const text = String(internationalState.firstLocoMode || "");
+  const textWidth = font.widthOfTextAtSize(text, 14);
+  const fieldCenterX = 547;
+
+  page.drawText(text, {
+    x: fieldCenterX - textWidth / 2,
+    y: 1191 - 924,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  });
+}
 
     // Pos. 1 - 31 Anzahl der Radsätze
     page.drawText(internationalState.firstLocoAxles || "", {
@@ -597,9 +608,9 @@ if (
     : internationalState.secondLocoSoleType || "";
 
   const pos2Mode =
-    internationalState.addLocoAtStation
-      ? internationalState.mode || ""
-      : internationalState.secondLocoMode || "";
+  internationalState.addLocoAtStation
+    ? internationalState.addedLocoMode || ""
+    : internationalState.secondLocoMode || "";
 
   const pos2BrakeWeightTons =
     internationalState.addLocoAtStation && internationalState.addedLocoBrakeWeightTons
@@ -666,13 +677,19 @@ if (
   });
 
   // 35 Bremsstellung
-  page.drawText(pos2Mode, {
-    x: 543,
+{
+  const text = String(pos2Mode || "");
+  const textWidth = font.widthOfTextAtSize(text, 14);
+  const fieldCenterX = 547;
+
+  page.drawText(text, {
+    x: fieldCenterX - textWidth / 2,
     y: 1191 - 945,
     size: 14,
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
+}
 
   // 36 Bremsgewicht
   page.drawText(pos2BrakeWeightTons, {

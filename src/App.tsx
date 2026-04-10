@@ -4,8 +4,6 @@ import { extractPdfText, parseTrainCheckerText, type ParsedSummary } from "./par
 type InternationalCountry = {
   code: string;
   label: string;
-  trainCategory: string;
-  vmax: string;
 };
 
 function formatVehicleNumberInput(value: string): string {
@@ -29,17 +27,6 @@ function formatVehicleNumberInput(value: string): string {
 
 function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  function updateTimetableSpeedFromCountries(countries: InternationalCountry[]) {
-  const vmaxValues = countries
-    .map((country) => Number(country.vmax))
-    .filter((value) => Number.isFinite(value) && value > 0);
-
-  if (vmaxValues.length === 0) return;
-
-  const maxVmax = Math.max(...vmaxValues);
-  setTimetableSpeedInput(String(maxVmax));
-}
 
 const [addLocoAtStation, setAddLocoAtStation] = useState(false);
 const [addLocoModalOpen, setAddLocoModalOpen] = useState(false);
@@ -167,7 +154,7 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
     festKn: 41,
   },
   {
-    name: "BR193 (Vectron)",
+    name: "BR193",
     weightTons: 90,
     brakeWeightP: 95,
     brakeWeightG: 72,
@@ -196,6 +183,7 @@ const [dynamicBrakeEffective, setDynamicBrakeEffective] = useState<boolean | nul
 const [secondCustomLokBrakePE, setSecondCustomLokBrakePE] = useState("");
 const [secondDynamicBrakeModalOpen, setSecondDynamicBrakeModalOpen] = useState(false);
 const [secondDynamicBrakeEffective, setSecondDynamicBrakeEffective] = useState<boolean | null>(null);
+const [freinageForfaitaire, setFreinageForfaitaire] = useState<null | boolean>(null);
 
 const [addedCustomLocoBrakePE, setAddedCustomLocoBrakePE] = useState("");
 const [addedDynamicBrakeModalOpen, setAddedDynamicBrakeModalOpen] = useState(false);
@@ -277,10 +265,109 @@ function hasAtLeastFourActiveWagonBrakes(parsedSummary: ParsedSummary | null): b
   return parsedSummary.multiReleaseBrakeCount >= 4;
 }
 
+function getGermanyBaseTrainCategory(parsedSummary: ParsedSummary | null): "P" | "G" | "M" {
+  if (!parsedSummary) return "P";
+
+  if (parsedSummary.hasOnlyGBrakes) {
+    return "G";
+  }
+
+  if (parsedSummary.hasMixedBrakeModes) {
+    return "M";
+  }
+
+  return "P";
+}
+
+function hasGermanyDynamicBrakeE(
+  dynamicBrakeEffective: boolean,
+  secondDynamicBrakeEffective: boolean | null,
+  doubleTraction: boolean
+): boolean {
+  // eine Lok
+  if (!doubleTraction) {
+    return dynamicBrakeEffective === true;
+  }
+
+  // zwei Loks -> beide müssen "Ja" sein
+  return dynamicBrakeEffective === true && secondDynamicBrakeEffective === true;
+}
+
+function buildGermanyTrainCategory(
+  parsedSummary: ParsedSummary | null,
+  timetableSpeed: number,
+  dynamicBrakeEffective: boolean,
+  secondDynamicBrakeEffective: boolean | null,
+  doubleTraction: boolean,
+  missingBrakePercentage: number
+): string {
+  const baseCategory = getGermanyBaseTrainCategory(parsedSummary);
+
+  const hasE = hasGermanyDynamicBrakeE(
+    dynamicBrakeEffective,
+    secondDynamicBrakeEffective,
+    doubleTraction
+  );
+
+  const categoryPrefix = hasE ? `${baseCategory}E` : baseCategory;
+
+  const adjustedSpeed = Math.max(0, timetableSpeed - missingBrakePercentage);
+
+  return `${categoryPrefix}${adjustedSpeed}`;
+}
+
+function buildSwitzerlandTrainCategory(
+  parsedSummary: ParsedSummary | null,
+  availableBrakePercentage: number
+): string {
+  if (!parsedSummary) return "";
+
+  const roundedBrake = Math.floor(availableBrakePercentage / 5) * 5;
+
+  const routeClass = parsedSummary.highestRouteClass;
+
+  const isDClass =
+    routeClass === "D2" ||
+    routeClass === "D3" ||
+    routeClass === "D4";
+
+  const prefix = isDClass ? "D" : "A";
+
+  return `${prefix}${roundedBrake}`;
+}
+
+function buildFranceTrainCategory(
+  brakePercentage: number,
+  trainLength: number,
+  freinageForfaitaire: boolean
+): string | null {
+  if (!freinageForfaitaire) {
+    return null;
+  }
+
+  if (trainLength <= 800) {
+    if (brakePercentage >= 57) return "MA100";
+    if (brakePercentage >= 50) return "MA90";
+    if (brakePercentage >= 47) return "MA80";
+  }
+
+  if (trainLength <= 900) {
+    if (brakePercentage >= 64) return "MA100";
+    if (brakePercentage >= 57) return "MA90";
+    if (brakePercentage >= 55) return "MA80";
+  }
+
+  if (trainLength <= 1000) {
+    if (brakePercentage >= 69) return "MA100";
+    if (brakePercentage >= 61) return "MA90";
+    if (brakePercentage >= 59) return "MA80";
+  }
+
+  return "";
+}
+
 function handleSelectMainLokFromList(lokName: string) {
-  setSelectedLok("list");
   setSelectedLokName(lokName);
-  setLokSelectOpen(false);
 
   const lok = locomotives.find((item) => item.name === lokName);
 
@@ -374,6 +461,35 @@ function determineLocoBrakeWeight(
   }
 
   return Math.floor(lok.brakeWeightG * 0.95);
+}
+
+function getDisplayedBrakeMode(
+  lok: {
+    brakeWeightPE?: number;
+  } | null,
+  selectedMode: "P" | "G",
+  dynamicBrakeEffective: boolean,
+  wagonWeight: number,
+  hasFourActiveBrakes: boolean
+): "P" | "G" | "P+E" {
+  if (!lok) return selectedMode;
+
+  const canUseDynamicBrake =
+    selectedMode === "P" &&
+    dynamicBrakeEffective &&
+    wagonWeight <= 800 &&
+    hasFourActiveBrakes &&
+    Number(lok.brakeWeightPE || 0) > 0;
+
+  if (canUseDynamicBrake) {
+    return "P+E";
+  }
+
+  if (selectedMode === "P" && wagonWeight > 800) {
+    return "G";
+  }
+
+  return selectedMode;
 }
 
   async function handlePdfSelection(event: React.ChangeEvent<HTMLInputElement>) {
@@ -503,6 +619,35 @@ if (hasMainError) {
   }
 
   const hasFourActiveBrakes = hasAtLeastFourActiveWagonBrakes(parsedSummary);
+  const firstLocoModeDisplay = getDisplayedBrakeMode(
+  activeLok,
+  mode,
+  dynamicBrakeEffective === true,
+  parsedSummary.totalWeightTons,
+  hasFourActiveBrakes
+);
+
+const secondLocoModeDisplay = tractionSecondLok
+  ? getDisplayedBrakeMode(
+      tractionSecondLok,
+      mode,
+      doubleTraction
+        ? dynamicBrakeEffective === true
+        : secondDynamicBrakeEffective === true,
+      parsedSummary.totalWeightTons,
+      hasFourActiveBrakes
+    )
+  : mode;
+
+const addedLocoModeDisplay = addedActiveLok
+  ? getDisplayedBrakeMode(
+      addedActiveLok,
+      mode,
+      addedDynamicBrakeEffective === true,
+      parsedSummary.totalWeightTons,
+      hasFourActiveBrakes
+    )
+  : mode;
 
 const locoBrakeWeight = determineLocoBrakeWeight(
   activeLok,
@@ -631,6 +776,35 @@ const directionChangeTotalBrakeWeight =
 
     const timetableSpeed = Number(timetableSpeedInput) || 0;
 
+    const germanyTrainCategory = buildGermanyTrainCategory(
+  parsedSummary,
+  timetableSpeed,
+  dynamicBrakeEffective === true,
+  doubleTraction ? dynamicBrakeEffective === true : secondDynamicBrakeEffective,
+  doubleTraction,
+  missingBrakePercentage
+);
+const germanyDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
+
+const switzerlandTrainCategory = buildSwitzerlandTrainCategory(
+  parsedSummary,
+  availableBrakePercentage
+);
+
+const franceTrainCategory = buildFranceTrainCategory(
+  availableBrakePercentage,
+  totalLength,
+  freinageForfaitaire === true
+);
+const franceDisplayedVmax =
+  franceTrainCategory === "MA100"
+    ? Math.min(timetableSpeed, 100)
+    : franceTrainCategory === "MA90"
+    ? Math.min(timetableSpeed, 90)
+    : franceTrainCategory === "MA80"
+    ? Math.min(timetableSpeed, 80)
+    : "";
+
 const lokTooSlow =
   timetableSpeed > 0 && activeLok.vmax < timetableSpeed;
 
@@ -741,7 +915,27 @@ let reversedStateToGenerate: any = null;
 if (printMode === "international") {
   const internationalState = {
     issuerEvu,
-    countries: selectedCountries,
+    countries: selectedCountries.map((country) => ({
+  ...country,
+  trainCategory:
+    country.code === "80"
+      ? germanyTrainCategory
+      : country.code === "85"
+      ? switzerlandTrainCategory
+      : country.code === "87"
+      ? franceTrainCategory || ""
+      : "",
+  vmax:
+    country.code === "80"
+      ? String(germanyDisplayedVmax)
+      : country.code === "85"
+      ? ""
+      : country.code === "87"
+      ? franceTrainCategory
+       ? String(franceDisplayedVmax)
+        : ""
+      : timetableSpeedInput || "",
+})),
     etcsDisplay,
     ntcDisplay,
     dangerousGoodsPresent: parsedSummary.dangerousGoodsPresent,
@@ -782,7 +976,7 @@ if (printMode === "international") {
     secondLocoSoleType: doubleTraction
   ? doubleTractionSecondSoleType
   : secondLocoSoleType,
-    secondLocoMode: mode,
+    secondLocoMode: secondLocoModeDisplay,
     secondLocoBrakeWeightTons: tractionSecondLok ? String(secondLocoBrakeWeight) : "",
     secondLocoInsertPosition,
     addLocoAtStation,
@@ -795,6 +989,7 @@ addedLocoAxles: addedActiveLok ? String(addedActiveLok.axles) : "",
 addedLocoLengthMeters: addedActiveLok ? String(addedActiveLok.lengthMeters) : "",
 addedLocoWeightTons: addedActiveLok ? String(addedActiveLok.weightTons) : "",
 addedLocoBrakeWeightTons: addedActiveLok ? String(addedLocoBrakeWeight) : "",
+addedLocoMode: addedActiveLok ? addedLocoModeDisplay : "",
 addedLocoFestKn: addedActiveLok ? String(addedLocoFestKn) : "",
 addedLocoRemark:
   addLocoAtStation && addLocoStation.trim() !== "" && addedLocoInsertPosition === "1"
@@ -850,7 +1045,7 @@ firstLocoAxles: String(activeLok.axles),
 firstLocoLengthMeters: String(activeLok.lengthMeters),
 firstLocoWeightTons: String(activeLok.weightTons),
 firstLocoSoleType: locoSoleType,
-firstLocoMode: mode,
+firstLocoMode: firstLocoModeDisplay,
 firstLocoBrakeWeightTons: String(locoBrakeWeight),
 firstLocoFestKn: String(locoFestKn),
 
@@ -1095,6 +1290,39 @@ if (directionChange && directionStation.trim() !== "") {
 }
   
   const warnings: string[] = [];
+
+  const franceNeedsManualClarification =
+  selectedCountries.some((country) => country.code === "87") &&
+  freinageForfaitaire === false;
+
+if (franceNeedsManualClarification) {
+  warnings.push(
+    "Bildung der Zugkategorie für Frankreich nicht möglich! Mit betriebsleitender Stelle weiteres Vorgehen abstimmen!"
+  );
+}
+
+  const dynamicBrakeRejectedBecauseOfWeight =
+  mode === "P" &&
+  parsedSummary.totalWeightTons > 800 &&
+  (
+    (Number(activeLok.brakeWeightPE || 0) > 0 && dynamicBrakeEffective === true) ||
+    (!!tractionSecondLok &&
+      Number(tractionSecondLok.brakeWeightPE || 0) > 0 &&
+      (
+        doubleTraction
+          ? dynamicBrakeEffective === true
+          : secondDynamicBrakeEffective === true
+      )) ||
+    (!!addedActiveLok &&
+      Number(addedActiveLok.brakeWeightPE || 0) > 0 &&
+      addedDynamicBrakeEffective === true)
+  );
+
+if (dynamicBrakeRejectedBecauseOfWeight) {
+  warnings.push(
+    "Achtung! Dynamische Bremse darf nicht angerechnet werden, da das Wagenzuggewicht größer als 800 t ist! Es wird automatisch Bremsgewicht G verwendet!"
+  );
+}
 
  const tooFewActiveBrakesForMainDynamicBrake =
   Number(activeLok.brakeWeightPE || 0) > 0 &&
@@ -2906,8 +3134,6 @@ setAddedDynamicBrakeModalOpen(false);
               {
                 code: country.code,
                 label: country.label,
-                trainCategory: "",
-                vmax: "",
               },
             ]);
           }
@@ -2923,28 +3149,6 @@ setAddedDynamicBrakeModalOpen(false);
   <div key={country.code} style={{ marginBottom: "12px" }}>
     <strong>{country.label}</strong>
 
-    <input
-      type="text"
-      placeholder="Zugkategorie"
-      value={country.trainCategory}
-      onChange={(e) => {
-        const updated = [...selectedCountries];
-        updated[index].trainCategory = e.target.value;
-        setSelectedCountries(updated);
-      }}
-    />
-
-    <input
-      type="number"
-      placeholder="Vmax (km/h)"
-      value={country.vmax}
-      onChange={(e) => {
-        const updated = [...selectedCountries];
-        updated[index].vmax = e.target.value;
-        setSelectedCountries(updated);
-        updateTimetableSpeedFromCountries(updated);
-      }}
-    />
   </div>
 ))}
 
@@ -2984,6 +3188,30 @@ setAddedDynamicBrakeModalOpen(false);
     <option value="L2">L2</option>
     <option value="L3">L3</option>
   </select>
+)}
+
+{selectedCountries.some((country) => country.code === "87") && (
+  <>
+    <label>Gilt für die Strecke in Frankreich "Freinage forfaitaire"?</label>
+
+    <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+      <button
+        type="button"
+        className={freinageForfaitaire === true ? "active" : ""}
+        onClick={() => setFreinageForfaitaire(true)}
+      >
+        Ja
+      </button>
+
+      <button
+        type="button"
+        className={freinageForfaitaire === false ? "active" : ""}
+        onClick={() => setFreinageForfaitaire(false)}
+      >
+        Nein
+      </button>
+    </div>
+  </>
 )}
 
 <label>Abfalltransport im Zug?</label>

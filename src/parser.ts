@@ -23,7 +23,9 @@ export type ParsedSummary = {
   dBrakeCount: number;
   dangerousGoodsPresent: boolean;
   lowerSpeedKmh: number | null;
-  allInGMode: boolean;
+ hasOnlyPBrakes: boolean;
+hasOnlyGBrakes: boolean;
+hasMixedBrakeModes: boolean;
 };
 
 type WagonRow = {
@@ -153,9 +155,9 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
 
   const sum = parseSummary(normalized);
 
-  const allInGMode =
-    activeRows.length > 0 &&
-    activeRows.every((r) => r.brakeP === 0 && r.brakeG > 0);
+  const hasOnlyPBrakes = sum.brakeP > 0 && sum.brakeG === 0;
+const hasOnlyGBrakes = sum.brakeG > 0 && sum.brakeP === 0;
+const hasMixedBrakeModes = sum.brakeP > 0 && sum.brakeG > 0;
 
   const finalBrakeFromDeduction = findGermanInt(
     normalized,
@@ -164,11 +166,11 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   );
 
   const finalBrake =
-    finalBrakeFromDeduction != null
-      ? finalBrakeFromDeduction
-      : allInGMode
-      ? sum.brakeG
-      : sum.brakeP;
+  finalBrakeFromDeduction != null
+    ? finalBrakeFromDeduction
+    : hasOnlyGBrakes
+    ? sum.brakeG
+    : sum.brakeP;
 
       console.log("DEBUG PARSER:", {
         rows,
@@ -198,7 +200,9 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
     dBrakeCount: dCount,
     dangerousGoodsPresent,
     lowerSpeedKmh: lowestVmax,
-    allInGMode,
+    hasOnlyPBrakes,
+hasOnlyGBrakes,
+hasMixedBrakeModes,
   };
 }
 
@@ -340,12 +344,28 @@ function parseRows(text: string): WagonRow[] {
 
     const brakeSectionMatch = afterSole.match(/^(-|\d{1,3})(?:\s+(-|\d{1,3}))?/);
 
-    const brakeP =
-      brakeSectionMatch && brakeSectionMatch[1] !== "-"
-        ? parseIntSafe(brakeSectionMatch[1])
-        : 0;
+const firstBrakeValue =
+  brakeSectionMatch && brakeSectionMatch[1] !== "-"
+    ? parseIntSafe(brakeSectionMatch[1])
+    : 0;
 
-    const brakeG = 0;
+const secondBrakeValue =
+  brakeSectionMatch && brakeSectionMatch[2] && brakeSectionMatch[2] !== "-"
+    ? parseIntSafe(brakeSectionMatch[2])
+    : 0;
+
+let brakeP = firstBrakeValue;
+let brakeG = secondBrakeValue;
+
+// Wenn beide Werte vorhanden sind, aber einer offensichtlich falsch ist → bereinigen
+if (brakeP > 0 && brakeG > 0) {
+  // Heuristik: In der Praxis ist einer davon oft Müll → wir nehmen den größeren
+  if (brakeP > brakeG) {
+    brakeG = 0;
+  } else {
+    brakeP = 0;
+  }
+}
 
     const dangerousGoods =
       /\b\d{4}\b\s+\b\d(?:[.,]\d)?(?:\?\:\s*,\s*\d(?:[.,]\d)?)?\b/.test(line) ||
