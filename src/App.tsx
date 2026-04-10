@@ -3145,7 +3145,7 @@ setAddedDynamicBrakeModalOpen(false);
   })}
 </div>
 
-{selectedCountries.map((country, index) => (
+{selectedCountries.map((country) => (
   <div key={country.code} style={{ marginBottom: "12px" }}>
     <strong>{country.label}</strong>
 
