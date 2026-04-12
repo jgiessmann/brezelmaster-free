@@ -36,6 +36,7 @@ const [addLocoStation, setAddLocoStation] = useState("");
 const [addedLocoSelectedType, setAddedLocoSelectedType] = useState<"list" | "custom">("list");
 const [addedLocoSelectedName, setAddedLocoSelectedName] = useState("G1206");
 const [addedLocoSelectOpen, setAddedLocoSelectOpen] = useState(false);
+const [addedLokSearch, setAddedLokSearch] = useState("");
 const [addedCustomLocoOpen, setAddedCustomLocoOpen] = useState(false);
 
 const [addedLocoVehicleNumber, setAddedLocoVehicleNumber] = useState("");
@@ -59,6 +60,7 @@ const [addLocoModalError, setAddLocoModalError] = useState(false);
   const [directionChange, setDirectionChange] = useState(false);
   const [secondLocoEnabled, setSecondLocoEnabled] = useState<null | boolean>(null);
 const [secondLokSelectOpen, setSecondLokSelectOpen] = useState(false);
+const [secondLokSearch, setSecondLokSearch] = useState("");
 const [secondCustomLokOpen, setSecondCustomLokOpen] = useState(false);
 const [secondSelectedLok, setSecondSelectedLok] = useState<"list" | "custom">("list");
 const [secondSelectedLokName, setSecondSelectedLokName] = useState("G1206");
@@ -108,6 +110,7 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
   const [pdfStatus, setPdfStatus] = useState<"idle" | "loading" | "success">("idle");
   const [selectedLokName, setSelectedLokName] = useState("G1206");
   const [lokSelectOpen, setLokSelectOpen] = useState(false);
+  const [lokSearch, setLokSearch] = useState("");
   const locomotives = [
   {
     name: "G1206",
@@ -163,6 +166,204 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
     vmax: 160,
     axles: 4,
     festKn: 56,
+  },
+  {
+    name: "BR151",
+    weightTons: 118,
+    brakeWeightP: 105,
+    brakeWeightG: 90,
+    brakeWeightPE: 0,
+    lengthMeters: 20,
+    vmax: 120,
+    axles: 6,
+    festKn: 30,
+  },
+  {
+    name: "BR185",
+    weightTons: 86,
+    brakeWeightP: 90,
+    brakeWeightG: 77,
+    brakeWeightPE: 105,
+    lengthMeters: 19,
+    vmax: 140,
+    axles: 4,
+    festKn: 46,
+  },
+  {
+    name: "BR143",
+    weightTons: 83,
+    brakeWeightP: 85,
+    brakeWeightG: 80,
+    brakeWeightPE: 102,
+    lengthMeters: 17,
+    vmax: 120,
+    axles: 4,
+    festKn: 30,
+  },
+  {
+    name: "BR152",
+    weightTons: 87,
+    brakeWeightP: 103,
+    brakeWeightG: 90,
+    brakeWeightPE: 0,
+    lengthMeters: 20,
+    vmax: 140,
+    axles: 4,
+    festKn: 45,
+  },
+  {
+    name: "BR145",
+    weightTons: 80,
+    brakeWeightP: 90,
+    brakeWeightG: 83,
+    brakeWeightPE: 105,
+    lengthMeters: 19,
+    vmax: 140,
+    axles: 4,
+    festKn: 60,
+  },
+  {
+    name: "BR189",
+    weightTons: 87,
+    brakeWeightP: 93,
+    brakeWeightG: 79,
+    brakeWeightPE: 107,
+    lengthMeters: 20,
+    vmax: 140,
+    axles: 4,
+    festKn: 46,
+  },
+  {
+    name: "BR363",
+    weightTons: 54,
+    brakeWeightP: 56,
+    brakeWeightG: 33,
+    brakeWeightPE: 0,
+    lengthMeters: 11,
+    vmax: 60,
+    axles: 3,
+    festKn: 20,
+  },
+  {
+    name: "BR294",
+    weightTons: 80,
+    brakeWeightP: 88,
+    brakeWeightG: 47,
+    brakeWeightPE: 0,
+    lengthMeters: 15,
+    vmax: 80,
+    axles: 4,
+    festKn: 47,
+  },
+  {
+    name: "BR187",
+    weightTons: 84,
+    brakeWeightP: 97,
+    brakeWeightG: 78,
+    brakeWeightPE: 0,
+    lengthMeters: 19,
+    vmax: 140,
+    axles: 4,
+    festKn: 46,
+  },
+  {
+    name: "BR146",
+    weightTons: 84,
+    brakeWeightP: 90,
+    brakeWeightG: 74,
+    brakeWeightPE: 100,
+    lengthMeters: 19,
+    vmax: 160,
+    axles: 4,
+    festKn: 54,
+  },
+  {
+    name: "BR155",
+    weightTons: 123,
+    brakeWeightP: 124,
+    brakeWeightG: 106,
+    brakeWeightPE: 0,
+    lengthMeters: 20,
+    vmax: 125,
+    axles: 6,
+    festKn: 50,
+  },
+  {
+    name: "BR182",
+    weightTons: 86,
+    brakeWeightP: 67,
+    brakeWeightG: 67,
+    brakeWeightPE: 100,
+    lengthMeters: 20,
+    vmax: 230,
+    axles: 4,
+    festKn: 25,
+  },
+  {
+    name: "ÖBB2016",
+    weightTons: 80,
+    brakeWeightP: 72,
+    brakeWeightG: 65,
+    brakeWeightPE: 0,
+    lengthMeters: 20,
+    vmax: 140,
+    axles: 4,
+    festKn: 20,
+  },
+  {
+    name: "BR261",
+    weightTons: 80,
+    brakeWeightP: 84,
+    brakeWeightG: 70,
+    brakeWeightPE: 0,
+    lengthMeters: 16,
+    vmax: 100,
+    axles: 4,
+    festKn: 43,
+  },
+  {
+    name: "BR218",
+    weightTons: 78,
+    brakeWeightP: 70,
+    brakeWeightG: 53,
+    brakeWeightPE: 0,
+    lengthMeters: 17,
+    vmax: 140,
+    axles: 4,
+    festKn: 40,
+  },
+  {
+    name: "G6(80)",
+    weightTons: 60,
+    brakeWeightP: 66,
+    brakeWeightG: 63,
+    brakeWeightPE: 0,
+    lengthMeters: 11,
+    vmax: 80,
+    axles: 3,
+    festKn: 35,
+  },
+  {
+    name: "V200",
+    weightTons: 79,
+    brakeWeightP: 74,
+    brakeWeightG: 58,
+    brakeWeightPE: 0,
+    lengthMeters: 19,
+    vmax: 140,
+    axles: 4,
+    festKn: 40,
+  },
+  {
+    name: "BR159",
+    weightTons: 123,
+    brakeWeightP: 142,
+    brakeWeightG: 118,
+    brakeWeightPE: 0,
+    lengthMeters: 24,
+    vmax: 120,
+    axles: 6,
+    festKn: 50,
   },
 ];
 const [customLokOpen, setCustomLokOpen] = useState(false);
@@ -924,6 +1125,8 @@ if (printMode === "international") {
       ? switzerlandTrainCategory
       : country.code === "87"
       ? franceTrainCategory || ""
+      : country.code === "83"
+      ? ""
       : "",
   vmax:
     country.code === "80"
@@ -932,8 +1135,10 @@ if (printMode === "international") {
       ? ""
       : country.code === "87"
       ? franceTrainCategory
-       ? String(franceDisplayedVmax)
+        ? String(franceDisplayedVmax)
         : ""
+      : country.code === "83"
+      ? ""
       : timetableSpeedInput || "",
 })),
     etcsDisplay,
@@ -1290,6 +1495,15 @@ if (directionChange && directionStation.trim() !== "") {
 }
   
   const warnings: string[] = [];
+
+  const italyNeedsManualClarification =
+  selectedCountries.some((country) => country.code === "83");
+
+if (italyNeedsManualClarification) {
+  warnings.push(
+    "Achtung: Für Italien kann ohne Streckendaten keine eindeutige zulässige Geschwindigkeit bzw. keine vollständige betriebliche Einstufung ermittelt werden. Bitte Streckendaten abgleichen."
+  );
+}
 
   const franceNeedsManualClarification =
   selectedCountries.some((country) => country.code === "87") &&
@@ -1777,7 +1991,7 @@ setAddedDynamicBrakeModalOpen(false);
         </div>
 
         <div className="input-row">
-          <label>Fahrplangeschwindigkeit</label>
+          <label>Fahrplangeschwindigkeit (Deutschland)</label>
           <div className="input">
             <input
   type="number"
@@ -1853,27 +2067,48 @@ setAddedDynamicBrakeModalOpen(false);
     <div className="modal-card">
       <h2>Lok auswählen</h2>
 
+      <input
+  type="text"
+  placeholder="Lok suchen..."
+  value={lokSearch}
+  onChange={(e) => setLokSearch(e.target.value)}
+  style={{ marginBottom: "10px" }}
+/>
+
       <div className="lok-list">
-        {locomotives.map((lok) => (
-  <button
-    key={lok.name}
-    type="button"
-    onClick={() => handleSelectMainLokFromList(lok.name)}
-    className={selectedLokName === lok.name ? "lok-list-button active" : "lok-list-button"}
-  >
-    {lok.name}
-  </button>
-))}
+        {(() => {
+  const filteredLokomotives = locomotives.filter((lok) =>
+    lok.name.toLowerCase().includes(lokSearch.toLowerCase())
+  );
+
+  if (filteredLokomotives.length === 0) {
+    return <div className="sub">Keine Lok gefunden</div>;
+  }
+
+  return filteredLokomotives.map((lok) => (
+    <button
+      key={lok.name}
+      type="button"
+      onClick={() => handleSelectMainLokFromList(lok.name)}
+      className={selectedLokName === lok.name ? "lok-list-button active" : "lok-list-button"}
+    >
+      {lok.name}
+    </button>
+  ));
+})()}
       </div>
 
       <div className="modal-actions">
         <button
-          type="button"
-          className="primary"
-          onClick={() => setLokSelectOpen(false)}
-        >
-          Schließen
-        </button>
+  type="button"
+  className="primary"
+  onClick={() => {
+    setLokSelectOpen(false);
+    setLokSearch("");
+  }}
+>
+  Schließen
+</button>
       </div>
     </div>
   </div>
@@ -1884,31 +2119,52 @@ setAddedDynamicBrakeModalOpen(false);
     <div className="modal-card">
       <h2>Zweite Lok auswählen</h2>
 
+      <input
+  type="text"
+  placeholder="Lok suchen..."
+  value={secondLokSearch}
+  onChange={(e) => setSecondLokSearch(e.target.value)}
+  style={{ marginBottom: "10px" }}
+/>
+
       <div className="lok-list">
-        {locomotives.map((lok) => (
-  <button
-    key={lok.name}
-    type="button"
-    onClick={() => handleSelectSecondLokFromList(lok.name)}
-    className={
-      secondSelectedLokName === lok.name
-        ? "lok-list-button active"
-        : "lok-list-button"
-    }
-  >
-    {lok.name}
-  </button>
-))}
+        {(() => {
+  const filteredLokomotives = locomotives.filter((lok) =>
+    lok.name.toLowerCase().includes(secondLokSearch.toLowerCase())
+  );
+
+  if (filteredLokomotives.length === 0) {
+    return <div className="sub">Keine Lok gefunden</div>;
+  }
+
+  return filteredLokomotives.map((lok) => (
+    <button
+      key={lok.name}
+      type="button"
+      onClick={() => handleSelectSecondLokFromList(lok.name)}
+      className={
+        secondSelectedLokName === lok.name
+          ? "lok-list-button active"
+          : "lok-list-button"
+      }
+    >
+      {lok.name}
+    </button>
+  ));
+})()}
       </div>
 
       <div className="modal-actions">
-        <button
-          type="button"
-          className="primary"
-          onClick={() => setSecondLokSelectOpen(false)}
-        >
-          Schließen
-        </button>
+       <button
+  type="button"
+  className="primary"
+  onClick={() => {
+    setSecondLokSelectOpen(false);
+    setSecondLokSearch("");
+  }}
+>
+  Schließen
+</button>
       </div>
     </div>
   </div>
@@ -2741,31 +2997,52 @@ setAddedDynamicBrakeModalOpen(false);
     <div className="modal-card">
       <h2>Zusätzliche Lok auswählen</h2>
 
+      <input
+  type="text"
+  placeholder="Lok suchen..."
+  value={addedLokSearch}
+  onChange={(e) => setAddedLokSearch(e.target.value)}
+  style={{ marginBottom: "10px" }}
+/>
+
       <div className="lok-list">
-        {locomotives.map((lok) => (
-  <button
-    key={lok.name}
-    type="button"
-    onClick={() => handleSelectAddedLokFromList(lok.name)}
-    className={
-      addedLocoSelectedName === lok.name
-        ? "lok-list-button active"
-        : "lok-list-button"
-    }
-  >
-    {lok.name}
-  </button>
-))}
+        {(() => {
+  const filteredLokomotives = locomotives.filter((lok) =>
+    lok.name.toLowerCase().includes(addedLokSearch.toLowerCase())
+  );
+
+  if (filteredLokomotives.length === 0) {
+    return <div className="sub">Keine Lok gefunden</div>;
+  }
+
+  return filteredLokomotives.map((lok) => (
+    <button
+      key={lok.name}
+      type="button"
+      onClick={() => handleSelectAddedLokFromList(lok.name)}
+      className={
+        addedLocoSelectedName === lok.name
+          ? "lok-list-button active"
+          : "lok-list-button"
+      }
+    >
+      {lok.name}
+    </button>
+  ));
+})()}
       </div>
 
       <div className="modal-actions">
         <button
-          type="button"
-          className="primary"
-          onClick={() => setAddedLocoSelectOpen(false)}
-        >
-          Schließen
-        </button>
+  type="button"
+  className="primary"
+  onClick={() => {
+    setAddedLocoSelectOpen(false);
+    setAddedLokSearch("");
+  }}
+>
+  Schließen
+</button>
       </div>
     </div>
   </div>
