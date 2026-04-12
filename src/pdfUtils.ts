@@ -790,7 +790,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeLocoCount || "", {
     x: 572,
     y: 1191 - 552,
@@ -800,7 +800,7 @@ if (internationalState.addLocoAtStation) {
   });
 }
 
-    if (internationalState.addLocoAtStation || internationalState.directionChange) {
+    if (internationalState.addLocoAtStation || internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.wagonCount || "", {
     x: 665,
     y: 1191 - 552,
@@ -819,7 +819,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeTotalVehicleCount || "", {
     x: 753,
     y: 1191 - 552,
@@ -844,7 +844,7 @@ if (internationalState.addLocoAtStation) {
       color: rgb(8 / 255, 12 / 255, 218 / 255),
     }
   );
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeLocoLengthMeters || "", {
     x: 572,
     y: 1191 - 583,
@@ -853,7 +853,7 @@ if (internationalState.addLocoAtStation) {
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
 }
-    if (internationalState.addLocoAtStation || internationalState.directionChange) {
+    if (internationalState.addLocoAtStation || internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.wagonLengthMeters || "", {
     x: 660,
     y: 1191 - 583,
@@ -872,7 +872,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeTotalLengthMeters || "", {
     x: 750,
     y: 1191 - 583,
@@ -897,7 +897,7 @@ if (internationalState.addLocoAtStation) {
       color: rgb(8 / 255, 12 / 255, 218 / 255),
     }
   );
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeLocoBrakeWeightTons || "", {
     x: 572,
     y: 1191 - 640,
@@ -907,7 +907,7 @@ if (internationalState.addLocoAtStation) {
   });
 }
 
-    if (internationalState.addLocoAtStation || internationalState.directionChange) {
+    if (internationalState.addLocoAtStation || internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.wagonBrakeWeightTons || "", {
     x: 660,
     y: 1191 - 640,
@@ -926,7 +926,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeTotalBrakeWeightTons || "", {
     x: 750,
     y: 1191 - 640,
@@ -951,7 +951,7 @@ if (internationalState.addLocoAtStation) {
       color: rgb(8 / 255, 12 / 255, 218 / 255),
     }
   );
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeLocoWeightTons || "", {
     x: 572,
     y: 1191 - 670,
@@ -961,7 +961,7 @@ if (internationalState.addLocoAtStation) {
   });
 }
 
-    if (internationalState.addLocoAtStation || internationalState.directionChange) {
+    if (internationalState.addLocoAtStation || internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.wagonWeightTons || "", {
     x: 660,
     y: 1191 - 670,
@@ -980,7 +980,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeTotalWeightTons || "", {
     x: 750,
     y: 1191 - 670,
@@ -1008,10 +1008,12 @@ page.drawText(internationalState.departureStation || "", {
       color: rgb(8 / 255, 12 / 255, 218 / 255),
     });
 
-    // 16b Gültig bis Bahnhof
+   // 16b Gültig bis Bahnhof
 page.drawText(
   internationalState.addLocoAtStation && internationalState.addLocoStation
     ? internationalState.addLocoStation
+    : internationalState.doubleTractionDropOff === true && internationalState.doubleTractionDropOffStation
+    ? internationalState.doubleTractionDropOffStation
     : internationalState.directionChange && internationalState.directionChangeStation
     ? internationalState.directionChangeStation
     : internationalState.destinationStation || "",
@@ -1033,6 +1035,17 @@ if (internationalState.addLocoAtStation && internationalState.addLocoStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
+} else if (
+  internationalState.doubleTractionDropOff === true &&
+  internationalState.doubleTractionDropOffStation
+) {
+  page.drawText(internationalState.doubleTractionDropOffStation || "", {
+    x: 540,
+    y: 1191 - 424,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  });
 } else if (internationalState.directionChange && internationalState.directionChangeStation) {
   page.drawText(internationalState.directionChangeStation || "", {
     x: 540,
@@ -1044,7 +1057,11 @@ if (internationalState.addLocoAtStation && internationalState.addLocoStation) {
 }
 
     // 16d Gültig bis Bahnhof rechts
-if (internationalState.addLocoAtStation || internationalState.directionChange) {
+if (
+  internationalState.addLocoAtStation ||
+  internationalState.directionChange ||
+  internationalState.doubleTractionDropOff
+) {
   page.drawText(internationalState.destinationStation || "", {
     x: 680,
     y: 1191 - 424,
@@ -1056,6 +1073,14 @@ if (internationalState.addLocoAtStation || internationalState.directionChange) {
 
     // 17c # des ersten Fahrzeugs rechts
 if (internationalState.addLocoAtStation) {
+  page.drawText(internationalState.firstVehicleNumber || "", {
+    x: 540,
+    y: 1191 - 465,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  });
+} else if (internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.firstVehicleNumber || "", {
     x: 540,
     y: 1191 - 465,
@@ -1082,6 +1107,14 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
+} else if (internationalState.doubleTractionDropOff) {
+  page.drawText(internationalState.lastVehicleNumber || "", {
+    x: 680,
+    y: 1191 - 465,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  });
 } else if (internationalState.directionChange) {
   page.drawText(internationalState.firstVehicleNumber || "", {
     x: 680,
@@ -1092,7 +1125,7 @@ if (internationalState.addLocoAtStation) {
   });
 }
 
-    // 24 rechts Vorhandene Bremshundertstel
+ // 24 rechts Vorhandene Bremshundertstel
 if (internationalState.addLocoAtStation) {
   page.drawText(internationalState.addLocoAvailableBrakePercentage || "", {
     x: 750,
@@ -1101,7 +1134,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeAvailableBrakePercentage || "", {
     x: 750,
     y: 1191 - 700,
@@ -1111,7 +1144,11 @@ if (internationalState.addLocoAtStation) {
   });
 }
 
-    if (internationalState.addLocoAtStation || internationalState.directionChange) {
+   if (
+  internationalState.addLocoAtStation ||
+  internationalState.directionChange ||
+  internationalState.doubleTractionDropOff
+) {
   page.drawText(internationalState.minimumBrakePercentage || "", {
     x: 753,
     y: 1191 - 730,
@@ -1121,7 +1158,7 @@ if (internationalState.addLocoAtStation) {
   });
 }
 
-    // 26 rechts Fehlende Bremshundertstel
+ // 26 rechts Fehlende Bremshundertstel
 if (internationalState.addLocoAtStation) {
   page.drawText(internationalState.addLocoMissingBrakePercentage || "", {
     x: 753,
@@ -1130,7 +1167,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(220 / 255, 0, 0),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeMissingBrakePercentage || "", {
     x: 753,
     y: 1191 - 763,
@@ -1158,7 +1195,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeWagonFestKn || "", {
     x: 659,
     y: 1191 - 612,
@@ -1200,7 +1237,7 @@ if (internationalState.addLocoAtStation) {
       color: rgb(8 / 255, 12 / 255, 218 / 255),
     }
   );
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeLocoFestKn || "", {
     x: 572,
     y: 1191 - 612,
@@ -1218,7 +1255,7 @@ if (internationalState.addLocoAtStation) {
     font,
     color: rgb(8 / 255, 12 / 255, 218 / 255),
   });
-} else if (internationalState.directionChange) {
+} else if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
   page.drawText(internationalState.directionChangeTotalFestKn || "", {
     x: 750,
     y: 1191 - 612,
@@ -1262,14 +1299,19 @@ if (internationalState.addLocoAtStation) {
   color: rgb(8 / 255, 12 / 255, 218 / 255),
 });
 
-    // 36a Pos. 2 Festhaltekraft zweite Lok
-    page.drawText(internationalState.secondLocoFestKn || "", {
-      x: 630,
-      y: 1191 - 945,
-      size: 14,
-      font,
-      color: rgb(8 / 255, 12 / 255, 218 / 255),
-    });
+    // 36a Pos. 2 Festhaltekraft zweite Lok / zusätzliche Lok
+page.drawText(
+  internationalState.addLocoAtStation
+    ? internationalState.addedLocoFestKn || ""
+    : internationalState.secondLocoFestKn || "",
+  {
+    x: 630,
+    y: 1191 - 945,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  }
+);
 
     // 27 links
     page.drawText(internationalState.fSoleBrakeWeightTons || "", {
@@ -1280,16 +1322,16 @@ if (internationalState.addLocoAtStation) {
       color: rgb(8 / 255, 12 / 255, 218 / 255),
     });
 
-    // 27 rechts
-    if (internationalState.directionChange) {
-      page.drawText(internationalState.fSoleBrakeWeightTons || "", {
-        x: 753,
-        y: 1191 - 792,
-        size: 14,
-        font,
-        color: rgb(8 / 255, 12 / 255, 218 / 255),
-      });
-    }
+   // 27 rechts
+if (internationalState.directionChange || internationalState.doubleTractionDropOff) {
+  page.drawText(internationalState.fSoleBrakeWeightTons || "", {
+    x: 753,
+    y: 1191 - 792,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  });
+}
 
     const pdfBytes = await pdfDoc.save();
 
@@ -1352,11 +1394,13 @@ if (internationalState.addLocoAtStation) {
     drawCentered(state.trainNumber || "", 308, 167);
 
     const abBhf =
-      state.directionChange && state.directionChangeStation.trim() !== ""
-        ? state.departureStation
-        : state.zugStart
-        ? ""
-        : state.departureStation;
+  state.directionChange && state.directionChangeStation.trim() !== ""
+    ? state.departureStation
+    : state.nationalDoubleTractionDropOff
+    ? state.departureStation
+    : state.zugStart
+    ? ""
+    : state.departureStation;
 
     drawCentered(abBhf || "", 713, 166);
 
