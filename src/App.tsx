@@ -954,6 +954,40 @@ const secondLocoStaysAfterDirectionChange =
         ))
     : false;
 
+
+const rightBlockUsesAddLocoState =
+  addLocoAtStation && addLocoStation.trim() !== "";
+
+const rightBlockFirstLocoIncluded = rightBlockUsesAddLocoState
+  ? true
+  : firstLocoStaysAfterDirectionChange;
+
+const rightBlockSecondLocoIncluded = rightBlockUsesAddLocoState
+  ? !!addedActiveLok
+  : secondLocoStaysAfterDirectionChange;
+
+  const rightBlockFirstLocoFSoleBrakeWeight =
+  rightBlockFirstLocoIncluded && locoSoleType === "F"
+    ? locoBrakeWeight
+    : 0;
+
+const rightBlockSecondLocoFSoleBrakeWeight = rightBlockUsesAddLocoState
+  ? addedActiveLok && addedLocoSoleType === "F"
+    ? addedLocoBrakeWeight
+    : 0
+  : rightBlockSecondLocoIncluded &&
+    tractionSecondLok &&
+    (doubleTraction
+      ? doubleTractionSecondSoleType === "F"
+      : secondLocoSoleType === "F")
+    ? secondLocoBrakeWeight
+    : 0;
+
+    const rightBlockFSoleBrakeWeight =
+  parsedSummary.fSoleBrakeWeightTons +
+  rightBlockFirstLocoFSoleBrakeWeight +
+  rightBlockSecondLocoFSoleBrakeWeight;
+
 const totalWeight =
   parsedSummary.totalWeightTons +
   activeLok.weightTons +
@@ -1017,6 +1051,20 @@ const directionChangeTotalWeight =
 
 const directionChangeTotalBrakeWeight =
   parsedSummary.totalBrakeWeightTons + directionChangeLocoBrakeWeight;
+
+const addLocoTotalBrakeWeight =
+  parsedSummary.totalBrakeWeightTons +
+  locoBrakeWeight +
+  (addedActiveLok ? addedLocoBrakeWeight : 0);
+
+  const rightBlockGraugussPercentage =
+  rightBlockUsesAddLocoState
+    ? addLocoTotalBrakeWeight > 0
+      ? Math.floor((rightBlockFSoleBrakeWeight * 100) / addLocoTotalBrakeWeight)
+      : 0
+    : directionChangeTotalBrakeWeight > 0
+    ? Math.floor((rightBlockFSoleBrakeWeight * 100) / directionChangeTotalBrakeWeight)
+    : 0;
 
   const availableBrakePercentage =
   totalWeight > 0
@@ -1140,10 +1188,29 @@ const addLocoTotalWeight =
   activeLok.weightTons +
   (addedActiveLok ? addedActiveLok.weightTons : 0);
 
-const addLocoTotalBrakeWeight =
-  parsedSummary.totalBrakeWeightTons +
-  locoBrakeWeight +
-  (addedActiveLok ? addedLocoBrakeWeight : 0);
+  const firstLocoFSoleBrakeWeight =
+  locoSoleType === "F" ? locoBrakeWeight : 0;
+
+const secondLocoFSoleBrakeWeight =
+  tractionSecondLok &&
+  (doubleTraction
+    ? doubleTractionSecondSoleType === "F"
+    : secondLocoSoleType === "F")
+    ? secondLocoBrakeWeight
+    : 0;
+
+
+    const totalFSoleBrakeWeight =
+  parsedSummary.fSoleBrakeWeightTons +
+  firstLocoFSoleBrakeWeight +
+  (doubleTraction && tractionSecondLok ? secondLocoFSoleBrakeWeight : 0);
+
+const graugussPercentage =
+  totalBrakeWeight > 0
+    ? Math.floor((totalFSoleBrakeWeight * 100) / totalBrakeWeight)
+    : 0;
+
+
 
 const addLocoTotalAxles =
   parsedSummary.totalAxles +
@@ -1283,10 +1350,14 @@ if (printMode === "international") {
     trainSpecialties,
     additionalRestrictionDocs,
 
-    fSoleBrakeWeightTons:
-      parsedSummary.fSoleBrakeWeightTons > 0
-        ? String(parsedSummary.fSoleBrakeWeightTons)
-        : "",
+   graugussPercentage:
+  graugussPercentage > 0
+    ? String(graugussPercentage)
+    : "",
+    rightBlockGraugussPercentage:
+  rightBlockGraugussPercentage > 0
+    ? String(rightBlockGraugussPercentage)
+    : "",
 
     locoVehicleNumber,
     locoName: activeLok.name,
