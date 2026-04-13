@@ -375,6 +375,8 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
 const [customLokOpen, setCustomLokOpen] = useState(false);
 const [nationalDoubleTractionDropOff, setNationalDoubleTractionDropOff] = useState(false);
 const [nationalDropOffStation, setNationalDropOffStation] = useState("");
+const [secondLocoModalError, setSecondLocoModalError] = useState(false);
+const [internationalModalError, setInternationalModalError] = useState(false);
 
 const [customLokName, setCustomLokName] = useState("");
 const [customLokWeight, setCustomLokWeight] = useState("");
@@ -1847,7 +1849,8 @@ const availableCountries = [
   printMode === "international" && addLocoAtStation;
 
   const directionChangeDisabled =
-  (printMode === "international" && addLocoAtStation) ||
+  (printMode === "international" &&
+    (addLocoAtStation || (doubleTraction && doubleTractionDropOff === true))) ||
   (printMode === "national" && doubleTraction && nationalDoubleTractionDropOff);
 
   return (
@@ -2816,6 +2819,7 @@ setAddedDynamicBrakeModalOpen(false);
         className={secondLocoEnabled === false ? "active" : ""}
         onClick={() => {
   setSecondLocoEnabled(false);
+  setSecondLocoModalError(false);
   setSecondSelectedLok("list");
   setSecondSelectedLokName("G1206");
   setSecondCustomLokName("");
@@ -2882,24 +2886,36 @@ setSecondCustomLokFestKn("");
   type="text"
   placeholder="Lokfahrzeugnummer zweite Lok"
   value={secondLocoVehicleNumber}
-  onChange={(e) =>
-    setSecondLocoVehicleNumber(formatVehicleNumberInput(e.target.value))
-  }
+  onChange={(e) => {
+    setSecondLocoVehicleNumber(formatVehicleNumberInput(e.target.value));
+    setSecondLocoModalError(false);
+  }}
   style={{ marginTop: "12px" }}
+  className={
+    secondLocoModalError && secondLocoVehicleNumber.trim() === ""
+      ? "input-error"
+      : ""
+  }
   inputMode="numeric"
   maxLength={16}
   autoComplete="off"
 />
 
     <select
-      value={secondLocoSoleType}
-      onChange={(e) =>
-        setSecondLocoSoleType(
-          e.target.value as "F" | "D" | "L" | "LL" | "K" | ""
-        )
-      }
-      style={{ marginTop: "12px" }}
-    >
+  value={secondLocoSoleType}
+  onChange={(e) => {
+    setSecondLocoSoleType(
+      e.target.value as "F" | "D" | "L" | "LL" | "K" | ""
+    );
+    setSecondLocoModalError(false);
+  }}
+  style={{ marginTop: "12px" }}
+  className={
+    secondLocoModalError && secondLocoSoleType === ""
+      ? "input-error"
+      : ""
+  }
+>
       <option value="">Bremssohlenart zweite Lok</option>
       <option value="F">F</option>
       <option value="D">D</option>
@@ -2990,6 +3006,19 @@ setSecondCustomLokFestKn("");
   }
 
   if (
+  printMode === "international" &&
+  !doubleTraction &&
+  secondLocoEnabled &&
+  (
+    secondLocoVehicleNumber.trim() === "" ||
+    secondLocoSoleType === ""
+  )
+) {
+  setSecondLocoModalError(true);
+  return;
+}
+
+  if (
     printMode === "international" &&
     !doubleTraction &&
     secondLocoEnabled &&
@@ -3025,7 +3054,11 @@ setSecondCustomLokFestKn("");
     );
     setDoubleTractionModalError(false);
   }}
-  className={doubleTractionModalError ? "input-error" : ""}
+  className={
+  doubleTractionModalError && doubleTractionSecondVehicleNumber.trim() === ""
+    ? "input-error"
+    : ""
+}
   inputMode="numeric"
   maxLength={16}
   autoComplete="off"
@@ -3039,7 +3072,11 @@ setSecondCustomLokFestKn("");
             );
             setDoubleTractionModalError(false);
           }}
-          className={doubleTractionModalError ? "input-error" : ""}
+          className={
+  doubleTractionModalError && doubleTractionSecondSoleType === ""
+    ? "input-error"
+    : ""
+}
         >
           <option value="">Bremssohlenart zweite Lok</option>
           <option value="F">F</option>
@@ -3054,12 +3091,19 @@ setSecondCustomLokFestKn("");
 
 <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
   <button
-    type="button"
-    className={doubleTractionDropOff === true ? "active" : ""}
-    onClick={() => setDoubleTractionDropOff(true)}
-  >
-    Ja
-  </button>
+  type="button"
+  className={doubleTractionDropOff === true ? "active" : ""}
+  onClick={() => {
+    setDoubleTractionDropOff(true);
+    setDirectionChange(false);
+    setDirectionStation("");
+    setReduceToOneLocoAfterDirectionChange(false);
+    setRemovedLocoAfterDirectionChange("");
+    setKeepDoubleTractionAfterDirectionChange(null);
+  }}
+>
+  Ja
+</button>
 
   <button
     type="button"
@@ -3904,25 +3948,39 @@ setAddedDynamicBrakeModalOpen(false);
   onChange={(e) => setTrainSpecialties(e.target.value)}
 />
 
-        <input
+       <input
   type="text"
   placeholder="Lokfahrzeugnummer"
   value={locoVehicleNumber}
-  onChange={(e) => setLocoVehicleNumber(formatVehicleNumberInput(e.target.value))}
+  onChange={(e) => {
+    setLocoVehicleNumber(formatVehicleNumberInput(e.target.value));
+    setInternationalModalError(false);
+  }}
+  className={
+    internationalModalError && locoVehicleNumber.trim() === ""
+      ? "input-error"
+      : ""
+  }
   inputMode="numeric"
   maxLength={16}
   autoComplete="off"
 />
 
         <label>Bremssohlenart der Lok</label>
-        <select
-          value={locoSoleType}
-          onChange={(e) =>
-            setLocoSoleType(
-              e.target.value as "F" | "D" | "L" | "LL" | "K" | ""
-            )
-          }
-        >
+       <select
+  value={locoSoleType}
+  onChange={(e) => {
+    setLocoSoleType(
+      e.target.value as "F" | "D" | "L" | "LL" | "K" | ""
+    );
+    setInternationalModalError(false);
+  }}
+  className={
+    internationalModalError && locoSoleType === ""
+      ? "input-error"
+      : ""
+  }
+>
           <option value="">Bitte wählen</option>
           <option value="F">F</option>
           <option value="D">D</option>
@@ -3939,20 +3997,26 @@ setAddedDynamicBrakeModalOpen(false);
           onClick={() => {
             setPrintMode("national");
             setInternationalModalOpen(false);
+            setInternationalModalError(false);
           }}
         >
           Zurück
         </button>
 
-        <button
-          type="button"
-          className="primary"
-          onClick={() => {
-            setInternationalModalOpen(false);
-          }}
-        >
-          Anwenden
-        </button>
+       <button
+  type="button"
+  className="primary"
+  onClick={() => {
+    if (locoVehicleNumber.trim() === "" || locoSoleType === "") {
+      setInternationalModalError(true);
+      return;
+    }
+
+    setInternationalModalOpen(false);
+  }}
+>
+  Anwenden
+</button>
       </div>
     </div>
   </div>
@@ -3969,7 +4033,7 @@ setAddedDynamicBrakeModalOpen(false);
         </p>
         <p>
           Der Entwickler hat diese App nach bestem Wissen umgesetzt.
-          Wir übernehmen jedoch keinerlei Haftung für Schäden, die ggf. durch die Nutzung der App entstehen.
+          Der Entwickler übernimmt jedoch keinerlei Haftung für Schäden, die ggf. durch die Nutzung der App entstehen.
           Dies beinhaltet sowohl die falsche Bedienung der App als auch eventuelle Softwarefehler.
         </p>
       </div>
