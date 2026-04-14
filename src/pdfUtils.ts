@@ -1314,17 +1314,17 @@ page.drawText(
 );
 
     // 27 links
-    page.drawText(
-  internationalState.graugussPercentage !== undefined
+   page.drawText(
+  internationalState.graugussPercentage
     ? internationalState.graugussPercentage + " %"
     : "",
   {
-  x: 470,
-  y: 1191 - 792,
-  size: 14,
-  font,
-  color: rgb(8 / 255, 12 / 255, 218 / 255),
-});
+    x: 470,
+    y: 1191 - 792,
+    size: 14,
+    font,
+    color: rgb(8 / 255, 12 / 255, 218 / 255),
+  });
 
    // 27 rechts
 if (
@@ -1333,7 +1333,7 @@ if (
   internationalState.doubleTractionDropOff
 ) {
   page.drawText(
-  internationalState.rightBlockGraugussPercentage !== undefined
+  internationalState.rightBlockGraugussPercentage
     ? internationalState.rightBlockGraugussPercentage + " %"
     : "",
   {
