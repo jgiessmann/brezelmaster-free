@@ -321,25 +321,36 @@ if (internationalState.exceptionalConsignment && internationalState.bzaNumber) {
       });
     }
 
-    if (internationalState.mode === "P") {
-      page.drawText("X", {
-        x: 140,
-        y: 1191 - 723,
-        size: 16,
-        font,
-        color: rgb(220 / 255, 0, 0),
-      });
-    }
+   if (internationalState.mode === "P") {
+  // Feld 15: bei Wagenzuggewicht > 1200 t nur LL+P, sonst nur P
+  if ((Number(internationalState.wagonWeightTons) || 0) > 1200) {
+    page.drawText("X", {
+      x: 150,
+      y: 1191 - 754,
+      size: 16,
+      font,
+      color: rgb(220 / 255, 0, 0),
+    });
+  } else {
+    page.drawText("X", {
+      x: 140,
+      y: 1191 - 723,
+      size: 16,
+      font,
+      color: rgb(220 / 255, 0, 0),
+    });
+  }
+}
 
-    if (internationalState.mode === "G") {
-      page.drawText("X", {
-        x: 140,
-        y: 1191 - 707,
-        size: 16,
-        font,
-        color: rgb(220 / 255, 0, 0),
-      });
-    }
+if (internationalState.mode === "G") {
+  page.drawText("X", {
+    x: 140,
+    y: 1191 - 707,
+    size: 16,
+    font,
+    color: rgb(220 / 255, 0, 0),
+  });
+}
 
     // 17a erster Wagen
     page.drawText(internationalState.firstVehicleNumber || "", {
