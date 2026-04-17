@@ -611,6 +611,13 @@ input[type="number"] {
   filter: brightness(0.95);
 }
 
+.help-button {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+}
+
 .help-center {
   text-align: center;
 }
@@ -625,6 +632,7 @@ input[type="number"] {
   display: flex;
   justify-content: center;
   gap: 90px;
+  flex-wrap: wrap;
 }
 
 .modal-card textarea {

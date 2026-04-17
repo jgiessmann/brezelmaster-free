@@ -28,6 +28,7 @@ function formatVehicleNumberInput(value: string): string {
 function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [legalNoticeOpen, setLegalNoticeOpen] = useState(false);
+  const [impressumOpen, setImpressumOpen] = useState(false);
 const [dontShowLegalNoticeAgain, setDontShowLegalNoticeAgain] = useState(false);
 const [appReady, setAppReady] = useState(false);
 
@@ -626,7 +627,6 @@ function handleSelectMainLokFromList(lokName: string) {
 function handleSelectSecondLokFromList(lokName: string) {
   setSecondSelectedLok("list");
   setSecondSelectedLokName(lokName);
-  setSecondLokSelectOpen(false);
 
   const lok = locomotives.find((item) => item.name === lokName);
 
@@ -641,7 +641,6 @@ function handleSelectSecondLokFromList(lokName: string) {
 function handleSelectAddedLokFromList(lokName: string) {
   setAddedLocoSelectedType("list");
   setAddedLocoSelectedName(lokName);
-  setAddedLocoSelectOpen(false);
 
   const lok = locomotives.find((item) => item.name === lokName);
 
@@ -2372,6 +2371,14 @@ setAddedDynamicBrakeModalOpen(false);
       Anleitung
     </a>
 
+    <button
+      type="button"
+      className="help-link help-button"
+      onClick={() => setImpressumOpen(true)}
+    >
+      Impressum
+    </button>
+
     <a
       href="/faq.pdf"
       target="_blank"
@@ -4088,6 +4095,39 @@ setAddedDynamicBrakeModalOpen(false);
 >
   Anwenden
 </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{impressumOpen && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      <h2>Impressum</h2>
+
+      <div style={{ marginBottom: "16px", lineHeight: 1.7 }}>
+        <p>
+          Jonas Gießmann
+          <br />
+          Dresdner Ring 7
+          <br />
+          76356 Weingarten (Baden)
+        </p>
+
+        <p>
+          Mail: info@brezelmaster.de
+        </p>
+      </div>
+
+      <div className="modal-actions" style={{ marginTop: 0, paddingTop: 0 }}>
+        <button
+          type="button"
+          className="primary"
+          style={{ width: "100%" }}
+          onClick={() => setImpressumOpen(false)}
+        >
+          Schließen
+        </button>
       </div>
     </div>
   </div>
