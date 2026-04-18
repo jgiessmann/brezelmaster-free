@@ -29,6 +29,7 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [legalNoticeOpen, setLegalNoticeOpen] = useState(false);
   const [impressumOpen, setImpressumOpen] = useState(false);
+  const [datenschutzOpen, setDatenschutzOpen] = useState(false);
 const [dontShowLegalNoticeAgain, setDontShowLegalNoticeAgain] = useState(false);
 const [appReady, setAppReady] = useState(false);
 
@@ -2362,32 +2363,40 @@ setAddedDynamicBrakeModalOpen(false);
   <strong className="help-title">💡 Brauchst du Hilfe?</strong>
 
   <div className="help-links">
-    <a
-      href="/anleitung.pdf"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="help-link"
-    >
-      Anleitung
-    </a>
+  <a
+    href="/anleitung.pdf"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="help-link"
+  >
+    Anleitung
+  </a>
 
-    <button
-      type="button"
-      className="help-link help-button"
-      onClick={() => setImpressumOpen(true)}
-    >
-      Impressum
-    </button>
+  <button
+    type="button"
+    className="help-link help-button"
+    onClick={() => setImpressumOpen(true)}
+  >
+    Impressum
+  </button>
 
-    <a
-      href="/faq.pdf"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="help-link"
-    >
-      FAQ
-    </a>
-  </div>
+  <button
+    type="button"
+    className="help-link help-button"
+    onClick={() => setDatenschutzOpen(true)}
+  >
+    Datenschutz
+  </button>
+
+  <a
+    href="/faq.pdf"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="help-link"
+  >
+    FAQ
+  </a>
+</div>
 </div>
 
       {lokSelectOpen && (
@@ -4125,6 +4134,100 @@ setAddedDynamicBrakeModalOpen(false);
           className="primary"
           style={{ width: "100%" }}
           onClick={() => setImpressumOpen(false)}
+        >
+          Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{datenschutzOpen && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      <h2>Datenschutz</h2>
+
+      <div style={{ marginBottom: "16px", lineHeight: 1.7 }}>
+        <p><strong>Datenschutzerklärung – WebApp (Brezelmaster)</strong></p>
+
+        <p>
+          <strong>1. Verantwortlicher</strong>
+          <br />
+          Jonas Gießmann
+          <br />
+          Dresdner Ring 7
+          <br />
+          76356 Weingarten (Baden)
+          <br />
+          E-Mail: info@brezelmaster.de
+        </p>
+
+        <p>
+          <strong>2. Allgemeines</strong>
+          <br />
+          Der Schutz Ihrer personenbezogenen Daten ist mir ein wichtiges Anliegen.
+          Diese WebApp verarbeitet Daten ausschließlich im notwendigen Umfang zur
+          Bereitstellung der Funktionen.
+        </p>
+
+        <p>
+          <strong>3. Nutzung der WebApp</strong>
+          <br />
+          Die WebApp ermöglicht das Hochladen von Wagenlisten (PDF) sowie die
+          Eingabe von Daten (z. B. Name) zur Erstellung eines Bremszettels.
+          Die Verarbeitung erfolgt ausschließlich zum Zweck der Erstellung des
+          Dokuments.
+        </p>
+
+        <p>
+          <strong>4. Keine Speicherung der Inhalte</strong>
+          <br />
+          Die vom Nutzer eingegebenen Daten sowie hochgeladenen Dateien werden
+          nicht dauerhaft gespeichert. Ich habe keine Einsicht in die konkreten
+          Inhalte der Nutzung der WebApp.
+        </p>
+
+        <p>
+          <strong>5. Server-Logfiles</strong>
+          <br />
+          Beim Aufruf der WebApp werden durch den Hostinganbieter (Netlify)
+          automatisch Informationen erfasst (z. B. IP-Adresse, Datum und Uhrzeit,
+          Browsertyp). Diese Daten dienen ausschließlich der Sicherstellung des
+          technischen Betriebs und werden nicht zur Auswertung des Nutzerverhaltens
+          verwendet.
+        </p>
+
+        <p>
+          <strong>6. Hosting</strong>
+          <br />
+          Diese WebApp wird über den Anbieter Netlify bereitgestellt. Dabei kann
+          es zu einer Verarbeitung personenbezogener Daten auf den Servern des
+          Anbieters kommen.
+        </p>
+
+        <p>
+          <strong>7. Rechte der betroffenen Personen</strong>
+          <br />
+          Sie haben das Recht auf Auskunft über die bei mir gespeicherten
+          personenbezogenen Daten sowie auf Berichtigung, Löschung und
+          Einschränkung der Verarbeitung. Zudem steht Ihnen ein Beschwerderecht
+          bei einer Datenschutzaufsichtsbehörde zu.
+        </p>
+
+        <p>
+          <strong>8. Kontakt</strong>
+          <br />
+          Bei Fragen zum Datenschutz können Sie sich jederzeit unter der oben
+          angegebenen E-Mail-Adresse an mich wenden.
+        </p>
+      </div>
+
+      <div className="modal-actions" style={{ marginTop: 0, paddingTop: 0 }}>
+        <button
+          type="button"
+          className="primary"
+          style={{ width: "100%" }}
+          onClick={() => setDatenschutzOpen(false)}
         >
           Schließen
         </button>

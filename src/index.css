@@ -630,8 +630,8 @@ input[type="number"] {
 
 .help-links {
   display: flex;
-  justify-content: center;
-  gap: 90px;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
