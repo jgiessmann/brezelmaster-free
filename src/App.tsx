@@ -587,23 +587,18 @@ function buildFranceTrainCategory(
 }
 
 function buildAustriaTrainCategory(
-  parsedSummary: ParsedSummary | null
+  selectedMode: "P" | "G",
+  wagonWeightTons: number
 ): string {
-  if (!parsedSummary) return "";
-
-  if (parsedSummary.hasOnlyPBrakes) {
-    return "P";
-  }
-
-  if (parsedSummary.hasOnlyGBrakes) {
+  if (selectedMode === "G") {
     return "G";
   }
 
-  if (parsedSummary.hasMixedBrakeModes) {
-    return "Misch";
+  if (selectedMode === "P" && wagonWeightTons > 1200) {
+    return "MISCH";
   }
 
-  return "";
+  return "P";
 }
 
 function isValidTrainCheckerSummary(parsed: ParsedSummary | null): boolean {
@@ -1131,17 +1126,35 @@ const luxembourgTrainCategory = buildGermanyTrainCategory(
   mode
 );
 const luxembourgDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
-const austriaTrainCategory = buildAustriaTrainCategory(parsedSummary);
+const austriaTrainCategory = buildAustriaTrainCategory(
+  mode,
+  parsedSummary.totalWeightTons
+);
 const austriaDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
-const polandTrainCategory = buildAustriaTrainCategory(parsedSummary);
+const polandTrainCategory = buildAustriaTrainCategory(
+  mode,
+  parsedSummary.totalWeightTons
+);
 const polandDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
-const belgiumTrainCategory = buildAustriaTrainCategory(parsedSummary);
+const belgiumTrainCategory = buildAustriaTrainCategory(
+  mode,
+  parsedSummary.totalWeightTons
+);
 const belgiumDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
-const czechTrainCategory = buildAustriaTrainCategory(parsedSummary);
+const czechTrainCategory = buildAustriaTrainCategory(
+  mode,
+  parsedSummary.totalWeightTons
+);
 const czechDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
-const denmarkTrainCategory = buildAustriaTrainCategory(parsedSummary);
+const denmarkTrainCategory = buildAustriaTrainCategory(
+  mode,
+  parsedSummary.totalWeightTons
+);
 const denmarkDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
-const netherlandsTrainCategory = buildAustriaTrainCategory(parsedSummary);
+const netherlandsTrainCategory = buildAustriaTrainCategory(
+  mode,
+  parsedSummary.totalWeightTons
+);
 const netherlandsDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
 
 
