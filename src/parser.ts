@@ -158,9 +158,27 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
   const hasAnyPBrake = rows.some((row) => row.brakeP > 0);
 const hasAnyGBrake = rows.some((row) => row.brakeG > 0);
 
-const hasOnlyPBrakes = hasAnyPBrake && !hasAnyGBrake;
-const hasOnlyGBrakes = hasAnyGBrake && !hasAnyPBrake;
-const hasMixedBrakeModes = hasAnyPBrake && hasAnyGBrake;
+const summaryShowsOnlyP = sum.brakeP > 0 && sum.brakeG === 0;
+const summaryShowsOnlyG = sum.brakeG > 0 && sum.brakeP === 0;
+const summaryShowsMixed = sum.brakeP > 0 && sum.brakeG > 0;
+
+let hasOnlyPBrakes = false;
+let hasOnlyGBrakes = false;
+let hasMixedBrakeModes = false;
+
+// Summenzeile hat Vorrang, wenn sie eindeutig ist
+if (summaryShowsOnlyP) {
+  hasOnlyPBrakes = true;
+} else if (summaryShowsOnlyG) {
+  hasOnlyGBrakes = true;
+} else if (summaryShowsMixed) {
+  hasMixedBrakeModes = true;
+} else {
+  // Fallback nur dann über die Einzelwagen
+  hasOnlyPBrakes = hasAnyPBrake && !hasAnyGBrake;
+  hasOnlyGBrakes = hasAnyGBrake && !hasAnyPBrake;
+  hasMixedBrakeModes = hasAnyPBrake && hasAnyGBrake;
+}
 
   const finalBrakeFromDeduction = findGermanInt(
     normalized,

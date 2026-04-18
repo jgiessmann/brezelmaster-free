@@ -480,14 +480,15 @@ function hasAtLeastFourActiveWagonBrakes(parsedSummary: ParsedSummary | null): b
   return parsedSummary.multiReleaseBrakeCount >= 4;
 }
 
-function getGermanyBaseTrainCategory(parsedSummary: ParsedSummary | null): "P" | "G" | "M" {
-  if (!parsedSummary) return "P";
-
-  if (parsedSummary.hasOnlyGBrakes) {
+function getGermanyBaseTrainCategory(
+  selectedMode: "P" | "G",
+  wagonWeightTons: number
+): "P" | "G" | "M" {
+  if (selectedMode === "G") {
     return "G";
   }
 
-  if (parsedSummary.hasMixedBrakeModes) {
+  if (selectedMode === "P" && wagonWeightTons > 1200) {
     return "M";
   }
 
@@ -514,9 +515,13 @@ function buildGermanyTrainCategory(
   dynamicBrakeEffective: boolean,
   secondDynamicBrakeEffective: boolean | null,
   doubleTraction: boolean,
-  missingBrakePercentage: number
+  missingBrakePercentage: number,
+  mode: "P" | "G"
 ): string {
-  const baseCategory = getGermanyBaseTrainCategory(parsedSummary);
+  const baseCategory = getGermanyBaseTrainCategory(
+  mode,
+  parsedSummary?.totalWeightTons || 0
+);
 
   const hasE = hasGermanyDynamicBrakeE(
     dynamicBrakeEffective,
@@ -1112,7 +1117,8 @@ const addLocoTotalBrakeWeight =
   dynamicBrakeEffective === true,
   doubleTraction ? dynamicBrakeEffective === true : secondDynamicBrakeEffective,
   doubleTraction,
-  missingBrakePercentage
+  missingBrakePercentage,
+  mode
 );
 const germanyDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
 const luxembourgTrainCategory = buildGermanyTrainCategory(
@@ -1121,7 +1127,8 @@ const luxembourgTrainCategory = buildGermanyTrainCategory(
   dynamicBrakeEffective === true,
   doubleTraction ? dynamicBrakeEffective === true : secondDynamicBrakeEffective,
   doubleTraction,
-  missingBrakePercentage
+  missingBrakePercentage,
+  mode
 );
 const luxembourgDisplayedVmax = Math.max(0, timetableSpeed - missingBrakePercentage);
 const austriaTrainCategory = buildAustriaTrainCategory(parsedSummary);
