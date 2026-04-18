@@ -155,9 +155,12 @@ export function parseTrainCheckerText(text: string): ParsedSummary {
 
   const sum = parseSummary(normalized);
 
-  const hasOnlyPBrakes = sum.brakeP > 0 && sum.brakeG === 0;
-const hasOnlyGBrakes = sum.brakeG > 0 && sum.brakeP === 0;
-const hasMixedBrakeModes = sum.brakeP > 0 && sum.brakeG > 0;
+  const hasAnyPBrake = rows.some((row) => row.brakeP > 0);
+const hasAnyGBrake = rows.some((row) => row.brakeG > 0);
+
+const hasOnlyPBrakes = hasAnyPBrake && !hasAnyGBrake;
+const hasOnlyGBrakes = hasAnyGBrake && !hasAnyPBrake;
+const hasMixedBrakeModes = hasAnyPBrake && hasAnyGBrake;
 
   const finalBrakeFromDeduction = findGermanInt(
     normalized,
@@ -357,10 +360,8 @@ const secondBrakeValue =
 let brakeP = firstBrakeValue;
 let brakeG = secondBrakeValue;
 
-// Wenn beide Werte vorhanden sind, aber einer offensichtlich falsch ist → bereinigen
 if (brakeP > 0 && brakeG > 0) {
-  // Heuristik: In der Praxis ist einer davon oft Müll → wir nehmen den größeren
-  if (brakeP > brakeG) {
+  if (brakeP >= brakeG) {
     brakeG = 0;
   } else {
     brakeP = 0;
