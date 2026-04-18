@@ -115,7 +115,7 @@ const [remarksDuringTrip, setRemarksDuringTrip] = useState("");
 const [trainSpecialties, setTrainSpecialties] = useState("");
 const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null | boolean>(null);
   const [selectedPdfName, setSelectedPdfName] = useState("");
-  const [pdfStatus, setPdfStatus] = useState<"idle" | "loading" | "success">("idle");
+  const [pdfStatus, setPdfStatus] = useState<"idle" | "loading" | "success" | "invalid">("idle");
   const [selectedLokName, setSelectedLokName] = useState("G1206");
   const [lokSelectOpen, setLokSelectOpen] = useState(false);
   const [lokSearch, setLokSearch] = useState("");
@@ -306,17 +306,6 @@ const [additionalRestrictionDocs, setAdditionalRestrictionDocs] = useState<null 
     vmax: 230,
     axles: 4,
     festKn: 25,
-  },
-  {
-    name: "ÖBB2016",
-    weightTons: 80,
-    brakeWeightP: 72,
-    brakeWeightG: 65,
-    brakeWeightPE: 0,
-    lengthMeters: 20,
-    vmax: 140,
-    axles: 4,
-    festKn: 20,
   },
   {
     name: "BR261",
@@ -612,6 +601,26 @@ function buildAustriaTrainCategory(
   return "";
 }
 
+function isValidTrainCheckerSummary(parsed: ParsedSummary | null): boolean {
+  if (!parsed) return false;
+
+  const hasTrainNumber = parsed.trainNumber.trim() !== "";
+  const hasDepartureStation = parsed.departureStation.trim() !== "";
+  const hasFirstVehicle = parsed.firstVehicleNumber.trim() !== "";
+  const hasLastVehicle = parsed.lastVehicleNumber.trim() !== "";
+  const hasWagons = parsed.wagonCount > 0;
+  const hasWeight = parsed.totalWeightTons > 0;
+
+  return (
+    hasTrainNumber &&
+    hasDepartureStation &&
+    hasFirstVehicle &&
+    hasLastVehicle &&
+    hasWagons &&
+    hasWeight
+  );
+}
+
 function handleSelectMainLokFromList(lokName: string) {
   setSelectedLokName(lokName);
 
@@ -759,17 +768,24 @@ function getDisplayedBrakeMode(
     setPdfStatus("loading");
 
     const text = await extractPdfText(file);
-    const parsed = parseTrainCheckerText(text);
+const parsed = parseTrainCheckerText(text);
 
-    setParsedSummary(parsed);
-    setPdfStatus("success");
+if (!isValidTrainCheckerSummary(parsed)) {
+  setParsedSummary(null);
+  setPdfStatus("invalid");
+  return;
+}
+
+setParsedSummary(parsed);
+setPdfStatus("success");
+
   } catch (error) {
-    console.error(error);
-    setSelectedPdfName("");
-    setPdfStatus("idle");
-    setParsedSummary(null);
-    alert("Fehler beim Einlesen der Wagenliste.");
-  }
+  console.error(error);
+  setSelectedPdfName("");
+  setPdfStatus("invalid");
+  setParsedSummary(null);
+  alert("Fehler beim Einlesen der Wagenliste.");
+}
 }
 
   const [selectedLok, setSelectedLok] = useState<"list" | "custom">("list");
@@ -856,11 +872,11 @@ if (hasMainError) {
   setIsGenerating(false);
   return;
 }
-  if (!parsedSummary) {
-    alert("Bitte zuerst eine Wagenliste hochladen.");
-    setIsGenerating(false);
-    return;
-  }
+  if (pdfStatus === "invalid" || !parsedSummary) {
+  alert("Bitte gültiges Wagenlistenformat (TrainChecker PDF) hochladen");
+  setIsGenerating(false);
+  return;
+}
 
   const hasFourActiveBrakes = hasAtLeastFourActiveWagonBrakes(parsedSummary);
   const firstLocoModeDisplay = getDisplayedBrakeMode(
@@ -1931,7 +1947,7 @@ const availableCountries = [
           <img src="/header-icon.png" className="header-icon" />
           <div className="header-text">
             <h1>BREZEL-Master</h1>
-            <p>by Jonas Gießmann | Version 4.1</p>
+            <p>by Jonas Gießmann | Version 4.2</p>
           </div>
         </div>
       </div>
@@ -1939,7 +1955,7 @@ const availableCountries = [
       <div className="card">
         <div className="card-title">
           <span className="icon">📄</span>
-          Wagenliste hochladen
+          Wagenliste hochladen (TrainChecker)
         </div>
 
         <input
@@ -1961,7 +1977,7 @@ const availableCountries = [
     fileInputRef.current?.click();
   }}
 >
-  Wagenliste hochladen
+  Wagenliste hochladen - PDF
 </button>
 
         <div
@@ -1973,9 +1989,10 @@ const availableCountries = [
       : "error"
   }`}
 >
-  {pdfStatus === "idle" && "✖ Keine Wagenliste ausgewählt"}
-  {pdfStatus === "loading" && "⏳ Wagenliste wird gelesen"}
-  {pdfStatus === "success" && "✔ Datei erfolgreich geladen und bereit zur Verarbeitung"}
+  {pdfStatus === "idle" && "✖ Keine TrainChecker-Wagenliste ausgewählt"}
+{pdfStatus === "loading" && "⏳ Wagenliste wird gelesen"}
+{pdfStatus === "success" && "✔ Gültiges TrainChecker-Format erkannt - Bereit zur Verarbeitung"}
+{pdfStatus === "invalid" && "✖ Kein gültiges TrainChecker Wagenlistenformat"}
 
   {selectedPdfName && (
     <div style={{ marginTop: 6, fontSize: 13 }}>
@@ -2020,7 +2037,7 @@ const availableCountries = [
       <div className="card">
         <div className="card-title">
           <span className="icon">🚆</span>
-          Lok wählen
+          Triebfahrzeug wählen
         </div>
 
         <div className="lok-row">
@@ -2032,7 +2049,7 @@ const availableCountries = [
     setLokSelectOpen(true);
   }}
 >
-  Lok aus Liste
+  Tfz aus Liste
   <span>Aktuell: {selectedLokName}</span>
 </button>
 
@@ -2044,7 +2061,7 @@ const availableCountries = [
     setCustomLokOpen(true);
   }}
 >
-  Eigene Lok
+  Eigenes Tfz
   <span>{customLokName || "Manuell eingeben"}</span>
 </button>
         </div>
@@ -2055,8 +2072,8 @@ const availableCountries = [
 
     <div className="row">
       <div>
-        <strong>Lok in Unterwegsbahnhof hinzufügen</strong>
-        <div className="sub">Soll unterwegs eine weitere arbeitende Lok dazukommen?</div>
+        <strong>Tfz in Unterwegsbahnhof hinzufügen</strong>
+        <div className="sub">Soll unterwegs ein weiteres arbeitendes Tfz dazukommen?</div>
       </div>
 
       <div className="switch">
@@ -2144,7 +2161,7 @@ setAddedDynamicBrakeModalOpen(false);
   <div className="row">
     <div>
       <strong>Doppeltraktion</strong>
-      <div className="sub">Fährt der Zug mit zwei arbeitenden Loks?</div>
+      <div className="sub">Fährt der Zug mit zwei arbeitenden Triebfahrzeugen?</div>
     </div>
 
     <div className="switch">
@@ -2179,8 +2196,8 @@ setAddedDynamicBrakeModalOpen(false);
   <>
     <div className="row" style={{ alignItems: "flex-start" }}>
       <div>
-        <strong>Ab Unterwegsbahnhof nur noch eine Lok?</strong>
-        <div className="sub">Geht unterwegs eine der beiden Loks weg?</div>
+        <strong>Ab Unterwegsbahnhof nur noch ein Tfz?</strong>
+        <div className="sub">Wird unterwegs eines der beiden Tfz ausgesetzt?</div>
       </div>
 
       <div className="toggle-group">
@@ -2312,7 +2329,7 @@ setAddedDynamicBrakeModalOpen(false);
         </div>
 
         <div className="input-row">
-          <label>Fahrplangeschwindigkeit (Deutschland)</label>
+          <label>Fahrplangeschwindigkeit</label>
           <div className="input">
             <input
   type="number"
@@ -2402,11 +2419,11 @@ setAddedDynamicBrakeModalOpen(false);
       {lokSelectOpen && (
   <div className="modal-overlay">
     <div className="modal-card">
-      <h2>Lok auswählen</h2>
+      <h2>Triebfahrzeug auswählen</h2>
 
       <input
   type="text"
-  placeholder="Lok suchen..."
+  placeholder="Triebfahrzeug suchen..."
   value={lokSearch}
   onChange={(e) => setLokSearch(e.target.value)}
   style={{ marginBottom: "10px" }}
@@ -2454,11 +2471,11 @@ setAddedDynamicBrakeModalOpen(false);
 {secondLokSelectOpen && (
   <div className="modal-overlay" style={{ zIndex: 1100 }}>
     <div className="modal-card">
-      <h2>Zweite Lok auswählen</h2>
+      <h2>Zweites Triebfahrzeug auswählen</h2>
 
       <input
   type="text"
-  placeholder="Lok suchen..."
+  placeholder="Triebfahrzeug suchen..."
   value={secondLokSearch}
   onChange={(e) => setSecondLokSearch(e.target.value)}
   style={{ marginBottom: "10px" }}
@@ -2510,12 +2527,12 @@ setAddedDynamicBrakeModalOpen(false);
 {secondCustomLokOpen && (
   <div className="modal-overlay" style={{ zIndex: 1100 }}>
     <div className="modal-card">
-      <h2>Zweite eigene Lok</h2>
+      <h2>Zweites eigenes Triebfahrzeug</h2>
 
       <div className="lok-list">
         <input
   type="text"
-  placeholder="Lokbezeichnung"
+  placeholder="Bezeichnung Tfz - z.B. BR185"
   value={secondCustomLokName}
   onChange={(e) => setSecondCustomLokName(e.target.value)}
   className={secondCustomErrors.name ? "input-error" : ""}
@@ -2653,12 +2670,12 @@ setAddedDynamicBrakeModalOpen(false);
 {customLokOpen && (
   <div className="modal-overlay">
     <div className="modal-card">
-      <h2>Eigene Lok</h2>
+      <h2>Eigenes Triebfahrzeug</h2>
 
       <div className="lok-list">
         <input
   type="text"
-  placeholder="Lokbezeichnung"
+  placeholder="Bezeichnung Tfz - z.B. BR185"
   value={customLokName}
   onChange={(e) => setCustomLokName(e.target.value)}
   className={customErrors.name ? "input-error" : ""}
@@ -2837,7 +2854,7 @@ setAddedDynamicBrakeModalOpen(false);
 
       {printMode === "international" && doubleTraction && (
   <>
-    <label>Nach Richtungswechsel nur noch eine Lok?</label>
+    <label>Nach Richtungswechsel nur noch ein Tfz?</label>
 
     <div style={{ display: "flex", gap: "10px", marginTop: "10px", marginBottom: "10px" }}>
       <button
@@ -2864,7 +2881,7 @@ setAddedDynamicBrakeModalOpen(false);
 
 {doubleTraction && reduceToOneLocoAfterDirectionChange && (
   <>
-    <label>Welche Lok geht beim Richtungswechsel weg?</label>
+    <label>Welches Tfz verlässt den Zug beim Richtungswechsel?</label>
 
     <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px", marginBottom: "10px" }}>
       <button
@@ -2890,7 +2907,7 @@ setAddedDynamicBrakeModalOpen(false);
 
 {printMode === "international" && !doubleTraction && (
   <>
-    <label>Weitere Lok?</label>
+    <label>Weiteres Tfz?</label>
 
     <div style={{ display: "flex", gap: "10px", marginTop: "10px", marginBottom: "10px" }}>
       <button
@@ -2949,7 +2966,7 @@ setSecondCustomLokFestKn("");
     setSecondLokSelectOpen(true);
   }}
 >
-  Lok aus Liste
+  Tfz aus Liste
   <span>Aktuell: {secondSelectedLokName}</span>
 </button>
 
@@ -2961,7 +2978,7 @@ setSecondCustomLokFestKn("");
     setSecondCustomLokOpen(true);
   }}
 >
-  Eigene Lok
+  Eigenes Triebfahrzeug
   <span>{secondCustomLokName || "Manuell eingeben"}</span>
 </button>
       </div>
@@ -2971,7 +2988,7 @@ setSecondCustomLokFestKn("");
   <>
     <input
   type="text"
-  placeholder="Lokfahrzeugnummer zweite Lok"
+  placeholder="Triebfahrzeugnummer (UIC) zweites Tfz"
   value={secondLocoVehicleNumber}
   onChange={(e) => {
     setSecondLocoVehicleNumber(formatVehicleNumberInput(e.target.value));
@@ -3003,7 +3020,7 @@ setSecondCustomLokFestKn("");
       : ""
   }
 >
-      <option value="">Bremssohlenart zweite Lok</option>
+      <option value="">Bremssohlenart zweites Tfz</option>
       <option value="F">F</option>
       <option value="D">D</option>
       <option value="L">L</option>
@@ -3012,7 +3029,7 @@ setSecondCustomLokFestKn("");
     </select>
 
     <label style={{ marginTop: "12px", display: "block" }}>
-  Position der zweiten Lok nach Richtungswechsel
+  Position des zweiten Tfz nach Richtungswechsel
 </label>
 
 <select
@@ -3128,12 +3145,12 @@ setSecondCustomLokFestKn("");
 {doubleTractionModalOpen && (
   <div className="modal-overlay" style={{ zIndex: 1100 }}>
     <div className="modal-card">
-      <h2>Zweite Lok bei Doppeltraktion</h2>
+      <h2>Zweites Triebfahrzeug bei Doppeltraktion</h2>
 
       <div className="lok-list">
         <input
   type="text"
-  placeholder="Lokfahrzeugnummer zweite Lok"
+  placeholder="Triebfahrzeugnummer (UIC) zweites Tfz"
   value={doubleTractionSecondVehicleNumber}
   onChange={(e) => {
     setDoubleTractionSecondVehicleNumber(
@@ -3165,7 +3182,7 @@ setSecondCustomLokFestKn("");
     : ""
 }
         >
-          <option value="">Bremssohlenart zweite Lok</option>
+          <option value="">Bremssohlenart zweites Tfz</option>
           <option value="F">F</option>
           <option value="D">D</option>
           <option value="L">L</option>
@@ -3174,7 +3191,7 @@ setSecondCustomLokFestKn("");
         </select>
       </div>
 
-      <label>Geht unterwegs eine Lok weg?</label>
+      <label>Verlässt unterwegs ein Tfz den Zug?</label>
 
 <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
   <button
@@ -3219,7 +3236,7 @@ setSecondCustomLokFestKn("");
   doubleTractionDropOff === true &&
   doubleTractionDropOffStation.trim() !== "" && (
     <>
-      <label>Welche Lok geht weg?</label>
+      <label>Welches Tfz verlässt den Zug?</label>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "10px" }}>
         <button
@@ -3295,7 +3312,7 @@ setSecondCustomLokFestKn("");
 {addLocoModalOpen && (
   <div className="modal-overlay" style={{ zIndex: 1100 }}>
     <div className="modal-card">
-      <h2>Lok im Unterwegsbahnhof hinzufügen</h2>
+      <h2>Tfz im Unterwegsbahnhof hinzufügen</h2>
 
       <div className="lok-list">
         <input
@@ -3318,7 +3335,7 @@ setSecondCustomLokFestKn("");
     setAddedLocoSelectOpen(true);
   }}
 >
-  Lok aus Liste
+  Tfz aus Liste
   <span>Aktuell: {addedLocoSelectedName}</span>
 </button>
 
@@ -3330,14 +3347,14 @@ setSecondCustomLokFestKn("");
     setAddedCustomLocoOpen(true);
   }}
 >
-  Eigene Lok
+  Eigenes Triebfahrzeug
   <span>{addedCustomLocoName || "Manuell eingeben"}</span>
 </button>
         </div>
 
         <input
           type="text"
-          placeholder="Lokfahrzeugnummer"
+          placeholder="Triebfahrzeugnummer (UIC)"
           value={addedLocoVehicleNumber}
           onChange={(e) => {
             setAddedLocoVehicleNumber(formatVehicleNumberInput(e.target.value));
@@ -3351,7 +3368,7 @@ setSecondCustomLokFestKn("");
         />
 
         <label style={{ marginTop: "12px", display: "block" }}>
-  Position der zusätzlichen Lok ab Unterwegsbahnhof
+  Position des zusätzlichen Tfz ab Unterwegsbahnhof
 </label>
 
 <select
@@ -3379,7 +3396,7 @@ setSecondCustomLokFestKn("");
   style={{ marginTop: "12px" }}
   className={addLocoModalError && addedLocoSoleType === "" ? "input-error" : ""}
 >
-  <option value="">Bremssohlenart zusätzliche Lok</option>
+  <option value="">Bremssohlenart zusätzliches Tfz</option>
   <option value="F">F</option>
   <option value="D">D</option>
   <option value="L">L</option>
@@ -3453,11 +3470,11 @@ setAddedDynamicBrakeModalOpen(false);
 {addedLocoSelectOpen && (
   <div className="modal-overlay" style={{ zIndex: 1200 }}>
     <div className="modal-card">
-      <h2>Zusätzliche Lok auswählen</h2>
+      <h2>Zusätzliches Triebfahrzeug auswählen</h2>
 
       <input
   type="text"
-  placeholder="Lok suchen..."
+  placeholder="Triebfahrzeug suchen..."
   value={addedLokSearch}
   onChange={(e) => setAddedLokSearch(e.target.value)}
   style={{ marginBottom: "10px" }}
@@ -3509,12 +3526,12 @@ setAddedDynamicBrakeModalOpen(false);
 {addedCustomLocoOpen && (
   <div className="modal-overlay" style={{ zIndex: 1200 }}>
     <div className="modal-card">
-      <h2>Zusätzliche eigene Lok</h2>
+      <h2>Zusätzliches eigenes Tfz</h2>
 
       <div className="lok-list">
         <input
   type="text"
-  placeholder="Lokbezeichnung"
+  placeholder="Bezeichnung Tfz - z.B. BR185"
   value={addedCustomLocoName}
   onChange={(e) => setAddedCustomLocoName(e.target.value)}
   className={addedCustomErrors.name ? "input-error" : ""}
@@ -3748,7 +3765,7 @@ setAddedDynamicBrakeModalOpen(false);
 {secondDynamicBrakeModalOpen && (
   <div className="modal-overlay">
     <div className="modal-card">
-      <h2>Dynamische Bremse zweite Lok</h2>
+      <h2>Dynamische Bremse zweites Tfz</h2>
 
       <label>Ist die dynamische Bremse wirksam?</label>
 
@@ -4037,7 +4054,7 @@ setAddedDynamicBrakeModalOpen(false);
 
        <input
   type="text"
-  placeholder="Lokfahrzeugnummer"
+  placeholder="Triebfahrzeugnummer (UIC)"
   value={locoVehicleNumber}
   onChange={(e) => {
     setLocoVehicleNumber(formatVehicleNumberInput(e.target.value));
@@ -4053,7 +4070,7 @@ setAddedDynamicBrakeModalOpen(false);
   autoComplete="off"
 />
 
-        <label>Bremssohlenart der Lok</label>
+        <label>Bremssohlenart des Tfz</label>
        <select
   value={locoSoleType}
   onChange={(e) => {
