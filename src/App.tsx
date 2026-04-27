@@ -1967,7 +1967,7 @@ const availableCountries = [
           <img src="/header-icon.png" className="header-icon" />
           <div className="header-text">
             <h1>BREZEL-Master</h1>
-            <p>by Jonas Gießmann | Version 4.2</p>
+            <p>Version 4.2</p>
           </div>
         </div>
       </div>
