@@ -4286,6 +4286,9 @@ setAddedDynamicBrakeModalOpen(false);
           Der Entwickler hat diese App nach bestem Wissen umgesetzt.
           Der Entwickler übernimmt jedoch keinerlei Haftung für Schäden, die ggf. durch die Nutzung der App entstehen.
           Dies beinhaltet sowohl die falsche Bedienung der App als auch eventuelle Softwarefehler.
+          </p>
+          <p>
+          Weitere rechtliche Hinweise sind der Anleitung zu entnehmen, welche am Seitenende abrufbar ist.
         </p>
       </div>
 
