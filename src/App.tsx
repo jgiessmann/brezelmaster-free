@@ -1967,7 +1967,7 @@ const availableCountries = [
           <img src="/header-icon.png" className="header-icon" />
           <div className="header-text">
             <h1>BREZEL-Master</h1>
-            <p>Version 4.2</p>
+            <p>Version 4.3</p>
           </div>
         </div>
       </div>
@@ -2341,7 +2341,11 @@ setAddedDynamicBrakeModalOpen(false);
             <input
   type="number"
   value={minimumBrakePercentageInput}
-  onChange={(e) => setMinimumBrakePercentageInput(e.target.value)}
+  onChange={(e) => {
+  if (e.target.value.length <= 3) {
+    setMinimumBrakePercentageInput(e.target.value);
+  }
+}}
   className={mainErrors.minimumBrakePercentage ? "input-error" : ""}
 />
             <span>%</span>
@@ -2354,7 +2358,11 @@ setAddedDynamicBrakeModalOpen(false);
             <input
   type="number"
   value={timetableSpeedInput}
-  onChange={(e) => setTimetableSpeedInput(e.target.value)}
+  onChange={(e) => {
+  if (e.target.value.length <= 3) {
+    setTimetableSpeedInput(e.target.value);
+  }
+}}
   className={mainErrors.timetableSpeed ? "input-error" : ""}
 />
             <span>km/h</span>

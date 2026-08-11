@@ -322,15 +322,57 @@ const festFromLine = festMatch ? parseIntSafe(festMatch[1]) : 0;
 }
 
   if (nums.length === 5) {
+  const value2 = parseGermanIntWithDots(nums[2]);
+  const value3 = parseGermanIntWithDots(nums[3]);
+  const value4 = parseIntSafe(nums[4]);
+
+  // Variante A:
+  // Ladung vorhanden, Festhaltekraft leer
+  //
+  // Beispiel:
+  // Summe 16 48,16 217.280 305.890 233
+  //                  Ladung  Gesamt   Bremse
+  if (value3 > 10000) {
     return {
       axles: parseIntSafe(nums[0]),
       lengthMeters: parseGermanDouble(nums[1]),
-      weightTons: Math.round(parseGermanIntWithDots(nums[2]) / 1000),
-      brakeP: parseIntSafe(nums[3]),
-      brakeG: parseIntSafe(nums[4]),
-      festKn: festFromLine,
+      weightTons: Math.round(value3 / 1000),
+      brakeP: value4,
+      brakeG: 0,
+      festKn: 0,
     };
   }
+
+  // Variante B:
+  // Ladung leer, Festhaltekraft vorhanden
+  //
+  // Schema:
+  // Summe Achsen Länge Gesamt Bremse Fest
+  return {
+    axles: parseIntSafe(nums[0]),
+    lengthMeters: parseGermanDouble(nums[1]),
+    weightTons: Math.round(value2 / 1000),
+    brakeP: parseIntSafe(nums[3]),
+    brakeG: 0,
+    festKn: value4,
+  };
+}
+
+if (nums.length === 4) {
+  // Ladung leer UND Festhaltekraft leer
+  //
+  // Beispiel 88165:
+  // Summe 16 48,16 88.610 86
+  //                  Gesamt Bremse
+  return {
+    axles: parseIntSafe(nums[0]),
+    lengthMeters: parseGermanDouble(nums[1]),
+    weightTons: Math.round(parseGermanIntWithDots(nums[2]) / 1000),
+    brakeP: parseIntSafe(nums[3]),
+    brakeG: 0,
+    festKn: 0,
+  };
+}
 
   return {
     axles: 0,
