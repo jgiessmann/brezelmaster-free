@@ -1794,6 +1794,12 @@ if (directionChange && directionStation.trim() !== "") {
   
   const warnings: string[] = [];
 
+  if (mode === "P" && parsedSummary.totalWeightTons > 800) {
+  warnings.push(
+    "Achtung! Wagenzuggewicht größer 800 Tonnen!\nArbeitende Triebfahrzeuge auf Bremsstellung G umstellen!\nBremsgewicht der arbeitenden Tfz wird automatisch angepasst."
+  );
+}
+
   const italyNeedsManualClarification =
   selectedCountries.some((country) => country.code === "83");
 
@@ -1967,7 +1973,7 @@ const availableCountries = [
           <img src="/header-icon.png" className="header-icon" />
           <div className="header-text">
             <h1>BREZEL-Master</h1>
-            <p>Version 4.3</p>
+            <p>Version 4.4</p>
           </div>
         </div>
       </div>
@@ -3713,6 +3719,11 @@ setAddedDynamicBrakeModalOpen(false);
       '<span class="warning-value">$1</span>'
     );
 
+    formatted = formatted.replace(
+  /Arbeitende Triebfahrzeuge auf Bremsstellung G umstellen!/g,
+  '<span style="color: #dc2626; font-weight: 700;">Arbeitende Triebfahrzeuge auf Bremsstellung G umstellen!</span>'
+);
+
     return (
       <div
         key={index}
@@ -3730,7 +3741,10 @@ setAddedDynamicBrakeModalOpen(false);
       className="primary"
       onClick={confirmWarningAndGeneratePdf}
     >
-      Trotzdem fortfahren
+     {warningItems.length === 1 &&
+warningItems[0].includes("Wagenzuggewicht größer 800 Tonnen!")
+  ? "Verstanden"
+  : "Trotzdem fortfahren"}
     </button>
   ) : (
     <button
