@@ -1973,7 +1973,7 @@ const availableCountries = [
           <img src="/header-icon.png" className="header-icon" />
           <div className="header-text">
             <h1>BREZEL-Master</h1>
-            <p>Version 4.4</p>
+            <p>Version 4.4.1</p>
           </div>
         </div>
       </div>
@@ -2446,6 +2446,15 @@ setAddedDynamicBrakeModalOpen(false);
     className="help-link"
   >
     FAQ
+  </a>
+
+    <a
+    href="/updatelog.pdf"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="help-link"
+  >
+    Updates
   </a>
 </div>
 </div>
